@@ -334,17 +334,6 @@ async function sendToWhatsapp() {
     whatsappBtnText.textContent = "Order on WhatsApp";
     whatsappBtnSpinner.classList.add("hidden");
 
-    if (isOrderSaved) {
-        let msg = `📌 Order Details 📌\n👤 Name: ${userName}\n🔢 Token: A${tokenCounter}\n\n`;
-        selectedFoods.forEach(item => {
-            msg += `🍽️ Item: ${item.name}\n🔢 Quantity: ${item.qty}\n💰 Price: ₹${item.qty * item.price}\n\n`;
-        });
-        msg += `---\n\nTotal Amount: ₹${computeTotal()}\n`;
-
-        const waNumber = "15551534276";
-        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, "_blank");
-
         tokenCounter = (tokenCounter % 1000) + 1;
         saveTokenCounter();
         clearCart();

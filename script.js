@@ -23,7 +23,6 @@ const menuContainer = document.getElementById("menuContainer");
 const categoryContainer = document.getElementById("categoryContainer");
 const totalDisplay = document.getElementById("totalDisplay");
 const tokenDisplay = document.getElementById("tokenDisplay");
-// ... (बाकी सभी DOM एलिमेंट्स वैसे ही रहेंगे)
 const summaryModal = document.getElementById("summaryModal");
 const summaryItemsContainer = document.getElementById("summaryItemsContainer");
 const summaryTotalDisplay = document.getElementById("summaryTotalDisplay");
@@ -35,10 +34,6 @@ const nameInput = document.getElementById("nameInput");
 const detailsModal = document.getElementById("detailsModal");
 const tokenModal = document.getElementById("tokenModal");
 const tokenNumberDisplay = document.getElementById("tokenNumberDisplay");
-const sendWhatsappBtn = document.getElementById("sendWhatsappBtn");
-const whatsappBtnText = document.getElementById("whatsappBtnText");
-const whatsappBtnSpinner = document.getElementById("whatsappBtnSpinner");
-
 
 // =================================================================
 // SECTION 3: CORE FUNCTIONS
@@ -158,13 +153,12 @@ function renderCategories() {
     `).join('');
 }
 
-
 // =================================================================
 // SECTION 4: EVENT HANDLERS & API INTERACTIONS
 // =================================================================
 
 /**
- * Clears the shopping cart and resets quantities. (FIXED)
+ * Clears the shopping cart and resets quantities.
  */
 function clearCart() {
     foods = initialFoods.map(f => ({ ...f, qty: 0 }));
@@ -172,11 +166,8 @@ function clearCart() {
     nameInput.value = "";
     renderFoods();
     updateTotalDisplay();
-    updateTokenDisplay(); // This line was added for immediate update
+    updateTokenDisplay();
 }
-
-// ... The rest of the functions (handleFoodItemClick, handleCategoryClick, openOrderSummary, etc.) remain the same
-// ... The entire SECTION 5: INITIALIZATION & EVENT LISTENERS remains the same
 
 /**
  * Handles clicks on quantity buttons and add buttons for menu items.
@@ -267,16 +258,49 @@ function submitName() {
 }
 
 /**
- * Confirms the order and shows the final token modal.
+ * Confirms the order and saves it to Airtable.
  */
-function confirmOrder() {
+async function confirmOrder() {
     if (!userName) {
         showModalMessage("Please enter your name first.");
         return;
     }
-    closeModal();
-    tokenNumberDisplay.textContent = `${tokenCounter}`;
-    tokenModal.classList.remove("hidden");
+
+    const selectedFoods = foods.filter(f => f.qty > 0);
+    if (selectedFoods.length === 0) {
+        showModalMessage("Your cart is empty. Please add items to order.");
+        return;
+    }
+
+    // Show loading state
+    const confirmBtn = document.getElementById("confirmOrderBtn");
+    const originalText = confirmBtn.textContent;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Saving Order...";
+
+    const orderData = {
+        name: userName,
+        token: `A${tokenCounter}`,
+        total: computeTotal(),
+        items: selectedFoods.map(item => ({ name: item.name, qty: item.qty, price: item.price }))
+    };
+
+    const isOrderSaved = await saveOrderToAirtable(orderData);
+
+    // Reset button state
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = originalText;
+
+    if (isOrderSaved) {
+        closeModal();
+        tokenNumberDisplay.textContent = `A${tokenCounter}`;
+        tokenModal.classList.remove("hidden");
+        
+        // Increment token counter for next order
+        tokenCounter = (tokenCounter % 1000) + 1;
+        saveTokenCounter();
+        updateTokenDisplay();
+    }
 }
 
 /**
@@ -308,49 +332,13 @@ async function saveOrderToAirtable(orderData) {
 }
 
 /**
- * Formats and sends the order details to WhatsApp.
+ * Completes the order process and resets the cart.
  */
-async function sendToWhatsapp() {
-    const selectedFoods = foods.filter(f => f.qty > 0);
-    if (!userName || selectedFoods.length === 0) {
-        showModalMessage("Order is incomplete. Please try again.");
-        return;
-    }
-
-    sendWhatsappBtn.disabled = true;
-    whatsappBtnText.textContent = "Saving...";
-    whatsappBtnSpinner.classList.remove("hidden");
-
-    const orderData = {
-        name: userName,
-        token: `A${tokenCounter}`,
-        total: computeTotal(),
-        items: selectedFoods.map(item => ({ name: item.name, qty: item.qty, price: item.price }))
-    };
-
-    const isOrderSaved = await saveOrderToAirtable(orderData);
-
-    sendWhatsappBtn.disabled = false;
-    whatsappBtnText.textContent = "Order on WhatsApp";
-    whatsappBtnSpinner.classList.add("hidden");
-if (isOrderSaved) {
-        let msg = `📌 Order Details 📌\n👤 Name: ${userName}\n🔢 Token: A${tokenCounter}\n\n`;
-        selectedFoods.forEach(item => {
-            msg += `🍽️ Item: ${item.name}\n🔢 Quantity: ${item.qty}\n💰 Price: ₹${item.qty * item.price}\n\n`;
-        });
-        msg += `---\n\nTotal Amount: ₹${computeTotal()}\n`;
-
-        const waNumber = "919824780507";
-        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, "_blank");
-        tokenCounter = (tokenCounter % 1000) + 1;
-        saveTokenCounter();
-        clearCart();
-        closeModal();
-        showModalMessage("Your order has been sent to WhatsApp and saved. Thank you!");
-    }
+function completeOrder() {
+    clearCart();
+    closeModal();
+    showModalMessage("Your order has been saved successfully. Thank you!");
 }
-
 
 // =================================================================
 // SECTION 5: INITIALIZATION & EVENT LISTENERS
@@ -395,8 +383,13 @@ function setupEventListeners() {
     document.getElementById("modalMessageOkayBtn").addEventListener("click", closeModal);
     document.getElementById("closeDetailsModalBtn").addEventListener("click", closeModal);
     document.getElementById("submitNameBtn").addEventListener("click", submitName);
-    sendWhatsappBtn.addEventListener("click", sendToWhatsapp);
     nameInput.addEventListener("keydown", (event) => { if (event.key === "Enter") submitName(); });
+    
+    // Add event listener for completing order from token modal
+    const completeOrderBtn = document.getElementById("completeOrderBtn");
+    if (completeOrderBtn) {
+        completeOrderBtn.addEventListener("click", completeOrder);
+    }
 }
 
 /**

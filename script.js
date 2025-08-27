@@ -341,7 +341,7 @@ async function sendToWhatsapp() {
         });
         msg += `---\n\nTotal Amount: ₹${computeTotal()}\n`;
 
-        const waNumber = "919824780507";
+        const waNumber = "15551534276";
         const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
         window.open(waUrl, "_blank");
 

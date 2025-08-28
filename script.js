@@ -3,7 +3,7 @@
 // =================================================================
 
 // --- AIRTABLE API DETAILS ---
-const AIRTABLE_TOKEN = 'patGHtMaDWo3zMYxm.729c6866f4a2a5d945a213af8ff68c7b48c41e439766e4a30486d1cd46ab463e';
+const AIRTABLE_TOKEN = 'patXspdv2ZXInfEBx.4621535cd2e67944c5ffcf862f3aa4904de19874ad1dd57628c18871ac407788';
 const AIRTABLE_BASE_ID = 'appLgIPkiF7jORwe7';
 const AIRTABLE_MENU_TABLE_NAME = 'Menu';
 const AIRTABLE_ORDERS_TABLE_NAME = 'Orders';

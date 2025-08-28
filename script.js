@@ -350,12 +350,158 @@ async function saveOrderToGoogleSheets(orderData) {
         return true;
         
     } catch (e) {
-        console.error("Error saving order to Google Sheets:", e);
-        showModalMessage("Order saving failed. Please try again.");
+/**
+ * Saves the order details to Google Sheets with improved error handling.
+ */
+async function saveOrderToGoogleSheets(orderData) {
+    const itemsString = orderData.items.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
+    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    
+    // Prepare the row data
+    const rowData = [
+        [orderData.name, orderData.token, orderData.total, itemsString, timestamp]
+    ];
+
+    console.log("Attempting to save order:", orderData);
+    console.log("Row data to append:", rowData);
+
+    try {
+        // Method 1: Try direct append first (simpler approach)
+        const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${ORDERS_SPREADSHEET_ID}/values/${ORDERS_SHEET_NAME}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&key=${GOOGLE_SHEETS_API_KEY}`;
+        
+        console.log("Making request to:", appendUrl);
+        
+        const appendResponse = await fetch(appendUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                values: rowData
+            })
+        });
+
+        console.log("Response status:", appendResponse.status);
+        console.log("Response status text:", appendResponse.statusText);
+
+        const responseData = await appendResponse.json();
+        console.log("Response data:", responseData);
+
+        if (!appendResponse.ok) {
+            // Log detailed error information
+            console.error("Google Sheets API Error Details:", responseData);
+            
+            // Check for specific error types
+            if (responseData.error) {
+                const error = responseData.error;
+                console.error("Error code:", error.code);
+                console.error("Error message:", error.message);
+                
+                if (error.code === 403) {
+                    throw new Error("Permission denied. Please check if the Google Sheets API key has write access to the spreadsheet.");
+                } else if (error.code === 404) {
+                    throw new Error("Spreadsheet or sheet not found. Please verify the spreadsheet ID and sheet name.");
+                } else if (error.code === 400) {
+                    throw new Error(`Bad request: ${error.message}`);
+                } else {
+                    throw new Error(`Google Sheets API Error (${error.code}): ${error.message}`);
+                }
+            } else {
+                throw new Error(`HTTP Error ${appendResponse.status}: ${appendResponse.statusText}`);
+            }
+        }
+
+        console.log('Order saved successfully to Google Sheets');
+        console.log('Updated range:', responseData.updates?.updatedRange);
+        console.log('Updated rows:', responseData.updates?.updatedRows);
+        
+        return true;
+        
+    } catch (e) {
+        console.error("Detailed error saving order to Google Sheets:", e);
+        console.error("Error stack:", e.stack);
+        
+        // Show more specific error message to user
+        let userMessage = "Order saving failed. ";
+        
+        if (e.message.includes("Permission denied") || e.message.includes("403")) {
+            userMessage += "Access denied to Google Sheets. Please check API permissions.";
+        } else if (e.message.includes("not found") || e.message.includes("404")) {
+            userMessage += "Spreadsheet not found. Please check the spreadsheet ID and sheet name.";
+        } else if (e.message.includes("network") || e.message.includes("fetch")) {
+            userMessage += "Network error. Please check your internet connection and try again.";
+        } else {
+            userMessage += "Please try again or contact support.";
+        }
+        
+        showModalMessage(userMessage + ` (Error: ${e.message})`);
         return false;
     }
 }
 
+/**
+ * Confirms the order and saves it to Google Sheets with enhanced error handling.
+ */
+async function confirmOrder() {
+    if (!userName) {
+        showModalMessage("Please enter your name first.");
+        return;
+    }
+
+    const selectedFoods = foods.filter(f => f.qty > 0);
+    if (selectedFoods.length === 0) {
+        showModalMessage("Your cart is empty. Please add items to order.");
+        return;
+    }
+
+    // Show loading state
+    const confirmBtn = document.getElementById("confirmOrderBtn");
+    const originalText = confirmBtn.textContent;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Saving Order...";
+
+    // Log the current state for debugging
+    console.log("Current userName:", userName);
+    console.log("Current tokenCounter:", tokenCounter);
+    console.log("Selected foods:", selectedFoods);
+    console.log("Total amount:", computeTotal());
+
+    const orderData = {
+        name: userName,
+        token: `A${tokenCounter}`,
+        total: computeTotal(),
+        items: selectedFoods.map(item => ({ 
+            name: item.name, 
+            qty: item.qty, 
+            price: item.price 
+        }))
+    };
+
+    console.log("Order data to save:", orderData);
+
+    const isOrderSaved = await saveOrderToGoogleSheets(orderData);
+
+    // Reset button state
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = originalText;
+
+    if (isOrderSaved) {
+        console.log("Order saved successfully, showing token modal");
+        closeModal();
+        tokenNumberDisplay.textContent = `A${tokenCounter}`;
+        tokenModal.classList.remove("hidden");
+        
+        // Increment token counter for next order
+        const oldToken = tokenCounter;
+        tokenCounter = (tokenCounter % 1000) + 1;
+        saveTokenCounter();
+        updateTokenDisplay();
+        
+        console.log(`Token incremented from A${oldToken} to A${tokenCounter}`);
+    } else {
+        console.log("Order saving failed");
+    }
+}
 /**
  * Completes the order process and resets the cart.
  */

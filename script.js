@@ -305,57 +305,80 @@ async function confirmOrder() {
 }
 
 /**
- * Saves the order details to Google Sheets.
+
+ * Saves the order details by sending them to a Google Apps Script Web App.
+
  */
+
 async function saveOrderToGoogleSheets(orderData) {
-    const itemsString = orderData.items.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
-    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-    
-    // Prepare the row data
-    const rowData = [
-        [orderData.name, orderData.token, orderData.total, itemsString, timestamp]
-    ];
+
+    // !!! IMPORTANT: Paste your Web App URL from Step 2 here !!!
+
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfzQ3D4CIlsCjVh24vNYaUSCHtwISmVWUMXd8LD4z58Fm8b2Bd_tp779sZwY2OZ2zB/exec";
+
+
 
     try {
-        // First, get the current data to find the next row
-        const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${ORDERS_SPREADSHEET_ID}/values/${ORDERS_SHEET_NAME}?key=${GOOGLE_SHEETS_API_KEY}`;
-        const getResponse = await fetch(getUrl);
-        
-        if (!getResponse.ok) {
-            throw new Error(`Failed to get sheet data: ${getResponse.statusText}`);
-        }
-        
-        const getData = await getResponse.json();
-        const nextRow = (getData.values ? getData.values.length : 0) + 1;
-        
-        // Append the new order
-        const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${ORDERS_SPREADSHEET_ID}/values/${ORDERS_SHEET_NAME}:append?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
-        
-        const appendResponse = await fetch(appendUrl, {
+
+        const response = await fetch(SCRIPT_URL, {
+
             method: 'POST',
+
+            mode: 'cors', // Required for cross-origin requests
+
             headers: {
+
                 'Content-Type': 'application/json',
+
             },
-            body: JSON.stringify({
-                values: rowData
-            })
+
+            // The body must be a string, so we stringify the order data.
+
+            // The Apps Script expects a specific format, so we pass orderData directly.
+
+            body: JSON.stringify(orderData) 
+
         });
 
-        if (!appendResponse.ok) {
-            const errorData = await appendResponse.json();
-            throw new Error(`Google Sheets API Error: ${JSON.stringify(errorData)}`);
+
+
+        if (!response.ok) {
+
+            throw new Error(`Network response was not ok: ${response.statusText}`);
+
         }
 
-        console.log('Order saved successfully to Google Sheets');
-        return true;
-        
-    } catch (e) {
-        console.error("Error saving order to Google Sheets:", e);
-        showModalMessage("Order saving failed. Please try again.");
-        return false;
-    }
-}
 
+
+        const result = await response.json();
+
+
+
+        if (result.result !== 'success') {
+
+            throw new Error(`Script error: ${result.message}`);
+
+        }
+
+
+
+        console.log('Order saved successfully via Apps Script');
+
+        return true;
+
+
+
+    } catch (e) {
+
+        console.error("Error saving order via Apps Script:", e);
+
+        showModalMessage("Order saving failed. Please try again.");
+
+        return false;
+
+    }
+
+}
 /**
  * Completes the order process and resets the cart.
  */

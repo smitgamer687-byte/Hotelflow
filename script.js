@@ -2,12 +2,11 @@
 // SECTION 1: CONFIGURATION & GLOBAL VARIABLES
 // =================================================================
 
-// --- GOOGLE SHEETS API DETAILS ---
-const GOOGLE_SHEETS_API_KEY = 'AIzaSyC5v4vDHCoHtwpV6uhctVj70iREvuOVxOo';
-const MENU_SPREADSHEET_ID = '1smEjMFME5KM0-nZXDry9yFiYC3DYzIXDfEDLNvSNRPI';
-const ORDERS_SPREADSHEET_ID = '1GLwvcbyPAih1PCTn43XeiVlqNajsRIlSw6zXO0aZ53U';
-const MENU_SHEET_NAME = 'Sheet1'; // Name of the sheet containing menu items
-const ORDERS_SHEET_NAME = 'Sheet1'; // Name of the sheet to store orders
+// --- AIRTABLE API DETAILS ---
+const AIRTABLE_TOKEN = 'patGHtMaDWo3zMYxm.729c6866f4a2a5d945a213af8ff68c7b48c41e439766e4a30486d1cd46ab463e';
+const AIRTABLE_BASE_ID = 'appLgIPkiF7jORwe7';
+const AIRTABLE_MENU_TABLE_NAME = 'Menu';
+const AIRTABLE_ORDERS_TABLE_NAME = 'Orders';
 
 // --- GLOBAL STATE VARIABLES ---
 let initialFoods = [];
@@ -117,7 +116,7 @@ function renderFoods() {
     menuContainer.innerHTML = filteredFoods.map(food => `
         <div class="bg-white rounded-2xl shadow-md overflow-hidden">
             <div class="h-48 sm:h-64 overflow-hidden">
-                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
+                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https.placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
             </div>
             <div class="p-4 pt-2">
                 <div class="flex justify-between items-start">
@@ -259,7 +258,7 @@ function submitName() {
 }
 
 /**
- * Confirms the order and saves it to Google Sheets.
+ * Confirms the order and saves it to Airtable.
  */
 async function confirmOrder() {
     if (!userName) {
@@ -286,7 +285,7 @@ async function confirmOrder() {
         items: selectedFoods.map(item => ({ name: item.name, qty: item.qty, price: item.price }))
     };
 
-    const isOrderSaved = await saveOrderToGoogleSheets(orderData);
+    const isOrderSaved = await saveOrderToAirtable(orderData);
 
     // Reset button state
     confirmBtn.disabled = false;
@@ -305,80 +304,33 @@ async function confirmOrder() {
 }
 
 /**
-
- * Saves the order details by sending them to a Google Apps Script Web App.
-
+ * Saves the order details to Airtable.
  */
-
-async function saveOrderToGoogleSheets(orderData) {
-
-    // !!! IMPORTANT: Paste your Web App URL from Step 2 here !!!
-
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk0YRyk2Z0CJS_L7yy2AFumW662iSqmsldv5nqWTor6reRNfoznEDFvqqicJI9OHAZsA/exec";
-
-
+async function saveOrderToAirtable(orderData) {
+    const itemsString = orderData.items.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
+    const payload = {
+        records: [{ fields: { "Name": orderData.name, "Token": orderData.token, "Total": orderData.total, "Items": itemsString } }]
+    };
 
     try {
-
-        const response = await fetch(SCRIPT_URL, {
-
+        const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_ORDERS_TABLE_NAME}`, {
             method: 'POST',
-
-            mode: 'cors', // Required for cross-origin requests
-
-            headers: {
-
-                'Content-Type': 'application/json',
-
-            },
-
-            // The body must be a string, so we stringify the order data.
-
-            // The Apps Script expects a specific format, so we pass orderData directly.
-
-            body: JSON.stringify(orderData) 
-
+            headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
-
-
         if (!response.ok) {
-
-            throw new Error(`Network response was not ok: ${response.statusText}`);
-
+            const errorData = await response.json();
+            throw new Error(`Airtable API Error: ${JSON.stringify(errorData)}`);
         }
-
-
-
-        const result = await response.json();
-
-
-
-        if (result.result !== 'success') {
-
-            throw new Error(`Script error: ${result.message}`);
-
-        }
-
-
-
-        console.log('Order saved successfully via Apps Script');
-
         return true;
-
-
-
     } catch (e) {
-
-        console.error("Error saving order via Apps Script:", e);
-
+        console.error("Error saving order to Airtable:", e);
         showModalMessage("Order saving failed. Please try again.");
-
         return false;
-
     }
-
 }
+
 /**
  * Completes the order process and resets the cart.
  */
@@ -393,49 +345,25 @@ function completeOrder() {
 // =================================================================
 
 /**
- * Fetches the menu data from Google Sheets.
+ * Fetches the menu data from Airtable.
  */
 async function fetchMenu() {
     try {
         menuContainer.innerHTML = `<p class="text-center col-span-full">Loading menu...</p>`;
-        
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${MENU_SPREADSHEET_ID}/values/${MENU_SHEET_NAME}?key=${GOOGLE_SHEETS_API_KEY}`;
-        const response = await fetch(url);
+        const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_MENU_TABLE_NAME}`, {
+            headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` }
+        });
 
-        if (!response.ok) {
-            throw new Error(`Network response was not ok: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
         
         const data = await response.json();
-        
-        if (!data.values || data.values.length === 0) {
-            throw new Error("No data found in the sheet");
-        }
-        
-        // Assuming the first row contains headers: id, name, category, price, image
-        const headers = data.values[0];
-        const rows = data.values.slice(1);
-        
-        initialFoods = rows.map((row, index) => {
-            const food = {};
-            headers.forEach((header, i) => {
-                if (header.toLowerCase() === 'price') {
-                    food[header.toLowerCase()] = parseFloat(row[i] || 0);
-                } else if (header.toLowerCase() === 'id') {
-                    food[header.toLowerCase()] = parseInt(row[i] || index + 1);
-                } else {
-                    food[header.toLowerCase()] = row[i] || '';
-                }
-            });
-            return food;
-        });
-        
+        initialFoods = data.records.map(record => record.fields);
         foods = initialFoods.map(f => ({ ...f, qty: 0 }));
 
     } catch (e) {
         console.error("Error fetching menu:", e);
-        showModalMessage("Could not load the menu. Please check Google Sheets API details.");
-        menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Google Sheets configuration.</p>`;
+        showModalMessage("Could not load the menu. Please check API details.");
+        menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Airtable details.</p>`;
     }
 }
 

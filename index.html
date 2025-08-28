@@ -540,30 +540,39 @@
                 menuContainer.innerHTML = `<p class="text-center col-span-full">Loading menu...</p>`;
                 
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${MENU_SPREADSHEET_ID}/values/${MENU_SHEET_NAME}?key=${GOOGLE_SHEETS_API_KEY}`;
+                console.log('Fetching menu from:', url);
+                
                 const response = await fetch(url);
+                console.log('Response status:', response.status);
 
                 if (!response.ok) {
-                    throw new Error(`Network response was not ok: ${response.statusText}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    console.log('Error response:', errorData);
+                    throw new Error(`API Error (${response.status}): ${errorData.error?.message || response.statusText}`);
                 }
                 
                 const data = await response.json();
+                console.log('Fetched data:', data);
                 
                 if (!data.values || data.values.length === 0) {
-                    throw new Error("No data found in the sheet");
+                    throw new Error("No data found in the sheet. Make sure your sheet has data and is publicly accessible.");
                 }
                 
                 // Assuming the first row contains headers: id, name, category, price, image
                 const headers = data.values[0];
                 const rows = data.values.slice(1);
                 
+                console.log('Headers found:', headers);
+                console.log('Data rows:', rows.length);
+                
                 initialFoods = rows.map((row, index) => {
                     const food = {};
                     headers.forEach((header, i) => {
-                        if (header.toLowerCase() === 'price') {
+                        if (header && header.toLowerCase() === 'price') {
                             food[header.toLowerCase()] = parseFloat(row[i] || 0);
-                        } else if (header.toLowerCase() === 'id') {
+                        } else if (header && header.toLowerCase() === 'id') {
                             food[header.toLowerCase()] = parseInt(row[i] || index + 1);
-                        } else {
+                        } else if (header) {
                             food[header.toLowerCase()] = row[i] || '';
                         }
                     });
@@ -571,11 +580,12 @@
                 });
                 
                 foods = initialFoods.map(f => ({ ...f, qty: 0 }));
+                console.log('Processed foods:', foods);
 
             } catch (e) {
                 console.error("Error fetching menu:", e);
-                showModalMessage("Could not load the menu. Please check Google Sheets API details.");
-                menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Google Sheets configuration.</p>`;
+                showModalMessage(`Could not load the menu: ${e.message}`);
+                menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu: ${e.message}</p>`;
             }
         }
 

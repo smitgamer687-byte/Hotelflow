@@ -95,7 +95,7 @@ function computeTotal() {
  * Updates the total price display in the main UI.
  */
 function updateTotalDisplay() {
-    totalDisplay.textContent = `₹${computeTotal()}`;
+    totalDisplay.textContent = `${computeTotal()}`;
 }
 
 /**

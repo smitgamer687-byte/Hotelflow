@@ -3,7 +3,7 @@
 // =================================================================
 
 // --- GOOGLE SHEETS API DETAILS ---
-const GOOGLE_SHEETS_API_KEY = 'AIzaSyAGFO7TWXuTv4mxmr6mvMRTqE7Y_FcFMbs';
+const GOOGLE_SHEETS_API_KEY = 'AIzaSyC5v4vDHCoHtwpV6uhctVj70iREvuOVxOo';
 const MENU_SPREADSHEET_ID = '1smEjMFME5KM0-nZXDry9yFiYC3DYzIXDfEDLNvSNRPI';
 const ORDERS_SPREADSHEET_ID = '1IGvU3FG-waMxGYNpKrFT8k8uDh6PuZ1aGj8KUnb8urw';
 const MENU_SHEET_NAME = 'Sheet1'; // Name of the sheet containing menu items

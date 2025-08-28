@@ -314,7 +314,7 @@ async function saveOrderToGoogleSheets(orderData) {
 
     // !!! IMPORTANT: Paste your Web App URL from Step 2 here !!!
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfzQ3D4CIlsCjVh24vNYaUSCHtwISmVWUMXd8LD4z58Fm8b2Bd_tp779sZwY2OZ2zB/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZM0kFFTFDxwTSSF-w8PH_Q0Ab2laBKzEnFShPRmSkjfGXQWX9J-qOBsMxG29D7pGM3g/exec";
 
 
 

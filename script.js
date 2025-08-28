@@ -3,17 +3,17 @@
 // =================================================================
 
 // --- AIRTABLE API DETAILS ---
-const AIRTABLE_TOKEN = 'patXspdv2ZXInfEBx.4621535cd2e67944c5ffcf862f3aa4904de19874ad1dd57628c18871ac407788';
+const AIRTABLE_TOKEN = 'patGHtMaDWo3zMYxm.729c6866f4a2a5d945a213af8ff68c7b48c41e439766e4a30486d1cd46ab463e';
 const AIRTABLE_BASE_ID = 'appLgIPkiF7jORwe7';
 const AIRTABLE_MENU_TABLE_NAME = 'Menu';
-const AIRTABLE_ORDERS_TABLE_NAME = 'Orders';
+const AIRTABLE_ORDERS_TABLE_NAME = 'Orders'; // <<-- Iska istemal dobara karenge
 
 // --- GLOBAL STATE VARIABLES ---
 let initialFoods = [];
 let foods = [];
 let searchCategory = "All";
 let userName = "";
-let tokenCounter = getTokenCounter();
+let userPhone = ""; // New variable for phone number
 
 // =================================================================
 // SECTION 2: DOM ELEMENT REFERENCES
@@ -22,64 +22,26 @@ let tokenCounter = getTokenCounter();
 const menuContainer = document.getElementById("menuContainer");
 const categoryContainer = document.getElementById("categoryContainer");
 const totalDisplay = document.getElementById("totalDisplay");
-const tokenDisplay = document.getElementById("tokenDisplay");
-// ... (बाकी सभी DOM एलिमेंट्स वैसे ही रहेंगे)
 const summaryModal = document.getElementById("summaryModal");
 const summaryItemsContainer = document.getElementById("summaryItemsContainer");
 const summaryTotalDisplay = document.getElementById("summaryTotalDisplay");
-const summaryTokenDisplay = document.getElementById("summaryTokenDisplay");
 const messageModal = document.getElementById("messageModal");
 const modalMessageText = document.getElementById("modalMessageText");
 const nameModal = document.getElementById("nameModal");
 const nameInput = document.getElementById("nameInput");
+const phoneInput = document.getElementById("phoneInput");
 const detailsModal = document.getElementById("detailsModal");
 const tokenModal = document.getElementById("tokenModal");
-const tokenNumberDisplay = document.getElementById("tokenNumberDisplay");
-const sendWhatsappBtn = document.getElementById("sendWhatsappBtn");
-const whatsappBtnText = document.getElementById("whatsappBtnText");
-const whatsappBtnSpinner = document.getElementById("whatsappBtnSpinner");
-
 
 // =================================================================
 // SECTION 3: CORE FUNCTIONS
 // =================================================================
 
-/**
- * Gets the token counter from local storage, ensuring it's within a valid range.
- */
-function getTokenCounter() {
-    try {
-        const v = localStorage.getItem("ajays_token_counter");
-        const counter = v ? Number(v) : 1;
-        return counter > 0 && counter <= 1000 ? counter : 1;
-    } catch (e) {
-        return 1;
-    }
-}
-
-/**
- * Saves the current token counter to local storage.
- */
-function saveTokenCounter() {
-    try {
-        localStorage.setItem("ajays_token_counter", String(tokenCounter));
-    } catch (e) {
-        console.error("Failed to save token counter:", e);
-    }
-}
-
-/**
- * Displays a message in the message modal.
- * @param {string} message - The message to display.
- */
 function showModalMessage(message) {
     modalMessageText.textContent = message;
     messageModal.classList.remove("hidden");
 }
 
-/**
- * Hides all modals.
- */
 function closeModal() {
     summaryModal.classList.add("hidden");
     messageModal.classList.add("hidden");
@@ -88,31 +50,14 @@ function closeModal() {
     tokenModal.classList.add("hidden");
 }
 
-/**
- * Calculates the total price of items in the cart.
- * @returns {number} The total price.
- */
 function computeTotal() {
     return foods.reduce((sum, food) => sum + (food.price * food.qty), 0);
 }
 
-/**
- * Updates the total price display in the main UI.
- */
 function updateTotalDisplay() {
     totalDisplay.textContent = `₹${computeTotal()}`;
 }
 
-/**
- * Updates the token number display in the header.
- */
-function updateTokenDisplay() {
-    tokenDisplay.textContent = `${tokenCounter}`;
-}
-
-/**
- * Renders the menu items based on the selected category.
- */
 function renderFoods() {
     const filteredFoods = searchCategory === "All" 
         ? foods 
@@ -146,9 +91,6 @@ function renderFoods() {
     updateTotalDisplay();
 }
 
-/**
- * Renders the category filter buttons.
- */
 function renderCategories() {
     const categories = ["All", ...new Set(initialFoods.map(f => f.category).filter(Boolean))];
     categoryContainer.innerHTML = categories.map(cat => `
@@ -158,29 +100,20 @@ function renderCategories() {
     `).join('');
 }
 
+function clearCart() {
+    foods = initialFoods.map(f => ({ ...f, qty: 0 }));
+    userName = "";
+    userPhone = "";
+    nameInput.value = "";
+    phoneInput.value = "";
+    renderFoods();
+    updateTotalDisplay();
+}
 
 // =================================================================
 // SECTION 4: EVENT HANDLERS & API INTERACTIONS
 // =================================================================
 
-/**
- * Clears the shopping cart and resets quantities. (FIXED)
- */
-function clearCart() {
-    foods = initialFoods.map(f => ({ ...f, qty: 0 }));
-    userName = "";
-    nameInput.value = "";
-    renderFoods();
-    updateTotalDisplay();
-    updateTokenDisplay(); // This line was added for immediate update
-}
-
-// ... The rest of the functions (handleFoodItemClick, handleCategoryClick, openOrderSummary, etc.) remain the same
-// ... The entire SECTION 5: INITIALIZATION & EVENT LISTENERS remains the same
-
-/**
- * Handles clicks on quantity buttons and add buttons for menu items.
- */
 function handleFoodItemClick(e) {
     const target = e.target;
     const id = parseInt(target.dataset.id);
@@ -201,9 +134,6 @@ function handleFoodItemClick(e) {
     updateTotalDisplay();
 }
 
-/**
- * Handles clicks on category buttons to filter the menu.
- */
 function handleCategoryClick(e) {
     if (e.target.classList.contains("category-btn")) {
         searchCategory = e.target.dataset.category;
@@ -212,9 +142,6 @@ function handleCategoryClick(e) {
     }
 }
 
-/**
- * Opens the order summary modal if items are selected.
- */
 function openOrderSummary() {
     const selectedFoods = foods.filter(f => f.qty > 0);
     if (selectedFoods.length === 0) {
@@ -233,13 +160,9 @@ function openOrderSummary() {
     `).join('');
 
     summaryTotalDisplay.textContent = `₹${computeTotal()}`;
-    summaryTokenDisplay.textContent = `${tokenCounter}`;
     summaryModal.classList.remove("hidden");
 }
 
-/**
- * Opens the modal to ask for the user's name.
- */
 function openNameModal() {
     if (computeTotal() === 0) {
         showModalMessage("Your cart is empty. Please add items to order.");
@@ -249,43 +172,43 @@ function openNameModal() {
     nameInput.focus();
 }
 
-/**
- * Validates and submits the user's name, then proceeds to order summary.
- */
 function submitName() {
     const currentUserName = nameInput.value.trim();
+    const currentUserPhone = phoneInput.value.trim();
     const nameRegex = /^[a-zA-Z\s]{2,}$/;
+    const phoneRegex = /^[0-9]{10}$/;
 
     if (!nameRegex.test(currentUserName)) {
-        showModalMessage("Please enter a valid name (at least 2 characters, letters and spaces only).");
+        showModalMessage("Please enter a valid name.");
+        return;
+    }
+    
+    if (!phoneRegex.test(currentUserPhone)) {
+        showModalMessage("Please enter a valid 10-digit phone number.");
         return;
     }
 
     userName = currentUserName;
+    userPhone = currentUserPhone;
     closeModal();
     openOrderSummary();
 }
 
-/**
- * Confirms the order and shows the final token modal.
- */
-function confirmOrder() {
-    if (!userName) {
-        showModalMessage("Please enter your name first.");
-        return;
-    }
-    closeModal();
-    tokenNumberDisplay.textContent = `${tokenCounter}`;
-    tokenModal.classList.remove("hidden");
-}
-
-/**
- * Saves the order details to Airtable.
- */
-async function saveOrderToAirtable(orderData) {
-    const itemsString = orderData.items.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
+// <<-- NAYA FUNCTION: Order ko Airtable mein save karne ke liye -->>
+async function saveOrderToAirtable() {
+    const selectedFoods = foods.filter(f => f.qty > 0);
+    const itemsString = selectedFoods.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
+    
     const payload = {
-        records: [{ fields: { "Name": orderData.name, "Token": orderData.token, "Total": orderData.total, "Items": itemsString } }]
+        records: [{ 
+            fields: { 
+                "Name": userName, 
+                "Phone": userPhone,
+                "Items": itemsString,
+                "Total": computeTotal(),
+                "Status": "Pending Acceptance" // Default status set karna
+            } 
+        }]
     };
 
     try {
@@ -299,58 +222,38 @@ async function saveOrderToAirtable(orderData) {
             const errorData = await response.json();
             throw new Error(`Airtable API Error: ${JSON.stringify(errorData)}`);
         }
-        return true;
+        return true; // Success
     } catch (e) {
         console.error("Error saving order to Airtable:", e);
         showModalMessage("Order saving failed. Please try again.");
-        return false;
+        return false; // Failure
     }
 }
 
-/**
- * Formats and sends the order details to WhatsApp.
- */
-async function sendToWhatsapp() {
-    const selectedFoods = foods.filter(f => f.qty > 0);
-    if (!userName || selectedFoods.length === 0) {
-        showModalMessage("Order is incomplete. Please try again.");
+
+// <<-- PURANA FUNCTION UPDATE KIYA GAYA HAI -->>
+async function confirmOrder() {
+    if (!userName || !userPhone) {
+        showModalMessage("Please enter your name and phone number first.");
         return;
     }
+    
+    // Disable confirm button to prevent multiple clicks
+    const confirmBtn = document.getElementById('confirmOrderBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Saving...';
 
-    sendWhatsappBtn.disabled = true;
-    whatsappBtnText.textContent = "Saving...";
-    whatsappBtnSpinner.classList.remove("hidden");
+    const isOrderSaved = await saveOrderToAirtable();
 
-    const orderData = {
-        name: userName,
-        token: `A${tokenCounter}`,
-        total: computeTotal(),
-        items: selectedFoods.map(item => ({ name: item.name, qty: item.qty, price: item.price }))
-    };
-
-    const isOrderSaved = await saveOrderToAirtable(orderData);
-
-    sendWhatsappBtn.disabled = false;
-    whatsappBtnText.textContent = "Order on WhatsApp";
-    whatsappBtnSpinner.classList.add("hidden");
-
+    // Re-enable confirm button
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Confirm Order';
+    
     if (isOrderSaved) {
-        let msg = `📌 Order Details 📌\n👤 Name: ${userName}\n🔢 Token: A${tokenCounter}\n\n`;
-        selectedFoods.forEach(item => {
-            msg += `🍽️ Item: ${item.name}\n🔢 Quantity: ${item.qty}\n💰 Price: ₹${item.qty * item.price}\n\n`;
-        });
-        msg += `---\n\nTotal Amount: ₹${computeTotal()}\n`;
-
-        const waNumber = "919824780507";
-        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, "_blank");
-
-        tokenCounter = (tokenCounter % 1000) + 1;
-        saveTokenCounter();
-        clearCart();
         closeModal();
-        showModalMessage("Your order has been sent to WhatsApp and saved. Thank you!");
+        tokenModal.classList.remove("hidden"); // Show the thank you modal
     }
+    // If saving fails, the error message is already shown by saveOrderToAirtable
 }
 
 
@@ -358,9 +261,6 @@ async function sendToWhatsapp() {
 // SECTION 5: INITIALIZATION & EVENT LISTENERS
 // =================================================================
 
-/**
- * Fetches the menu data from Airtable.
- */
 async function fetchMenu() {
     try {
         menuContainer.innerHTML = `<p class="text-center col-span-full">Loading menu...</p>`;
@@ -381,9 +281,6 @@ async function fetchMenu() {
     }
 }
 
-/**
- * Sets up all the event listeners for the application.
- */
 function setupEventListeners() {
     document.getElementById("viewMenuBtn").addEventListener("click", () => document.getElementById("menuContainer").scrollIntoView({ behavior: 'smooth' }));
     document.getElementById("knowMoreBtn").addEventListener("click", () => detailsModal.classList.remove("hidden"));
@@ -397,17 +294,23 @@ function setupEventListeners() {
     document.getElementById("modalMessageOkayBtn").addEventListener("click", closeModal);
     document.getElementById("closeDetailsModalBtn").addEventListener("click", closeModal);
     document.getElementById("submitNameBtn").addEventListener("click", submitName);
-    sendWhatsappBtn.addEventListener("click", sendToWhatsapp);
-    nameInput.addEventListener("keydown", (event) => { if (event.key === "Enter") submitName(); });
+    document.getElementById("finalOkayBtn").addEventListener("click", () => {
+        clearCart();
+        closeModal();
+    });
+
+    const enterKeyHandler = (event) => {
+        if (event.key === "Enter") {
+            submitName();
+        }
+    };
+    nameInput.addEventListener("keydown", enterKeyHandler);
+    phoneInput.addEventListener("keydown", enterKeyHandler);
 }
 
-/**
- * Initializes the application when the window loads.
- */
 window.onload = async () => {
     document.getElementById("currentYear").textContent = new Date().getFullYear();
-    updateTokenDisplay();
-
+    
     await fetchMenu();
     
     renderCategories();

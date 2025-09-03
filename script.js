@@ -2,18 +2,34 @@
 // SECTION 1: CONFIGURATION & GLOBAL VARIABLES
 // =================================================================
 
-// --- AIRTABLE API DETAILS ---
-const AIRTABLE_TOKEN = 'patGHtMaDWo3zMYxm.729c6866f4a2a5d945a213af8ff68c7b48c41e439766e4a30486d1cd46ab463e';
-const AIRTABLE_BASE_ID = 'appLgIPkiF7jORwe7';
-const AIRTABLE_MENU_TABLE_NAME = 'Menu';
-const AIRTABLE_ORDERS_TABLE_NAME = 'Orders'; // <<-- Iska istemal dobara karenge
+// --- GOOGLE SHEETS API DETAILS ---
+const GOOGLE_SHEETS_API_KEY = 'AIzaSyDmbBjVa9JVkaPjhAQdplrOzyAGVfi7qMU';
+const GOOGLE_SHEET_ID = '1yJMz6BFvR1r2v0TyJAHb7W0yYAzwSo8DfuQNgFp8E_I';
+const MENU_SHEET_NAME = 'Menu';
+const ORDERS_SHEET_NAME = 'Restaurant Orders';
+
+// Service Account Configuration
+const SERVICE_ACCOUNT_CONFIG = {
+    type: "service_account",
+    project_id: "whatsapp-chatbot-471004",
+    private_key_id: "80c87c17a5aaf6b4e890363e82dd22a115f3cf9e",
+    private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDlmD6rUTPIuhVU\nxebSiMY4ePaQTNmL+i6lZhjPZJSeqmN72XwSL8NnsV8pr91ZVt0aO9eK10RYxLq0\nOZDiuTgWvua3PG1kvV2PKSsKo7E7K1wS5SPERu+l/1jMoQwquqve+9hSUavf+EdT\nGt8sAQK9iheHJAzcgdLDCLj92xrTBqik2oCWu9rFkQ5KrUTjZ7WNLExeR7asGPKM\ne4OdqLDvpQH1fJm61uR9qPtiaA+hNzaihBEF0LlLUHKRAw7Kp1nNakinG29oqUPY\nj+b58HxkkAOh1wBafd190odxT6Q+pS9Ic1YOcibfpPJOdX0IM3UbkvvWm30Vv4Wb\nJ5VYAHiLAgMBAAECggEARy5024tw6R4cJ+y1W/eQsQh7tRBGcDnwBVKKhZ4S38BG\n2Kp8Z20MgZUBwnxmPWELaqs7760+4OCZW+/vBgPTqmWkRRIEfnOhUpW6ZPGMLKKM\nSMVm2d7+RLJOdx7FFWhLifX9wsPUbDte7ZqKr2tezKHIGptoK2NKkzIcnIO2JM84\n2Ma8eEte/nCNb1vv9g2LmtcluBwvmYk1vS/oHgxZBI2w1/mGAvzjIHuufbAZl3SB\ni/DWxEKJZaHAemRsThlQMQRIHC4oFVGHUJN9GH88TaNqPr0+HYjpNr6kFzdObvIJ\nZ4DvqVAQENPGAsnG33e8iXKYFfS+kKmS8Rs4gvQ/RQKBgQD16+45Aae2IfWvT+ss\nZOPNwDoCqd4sKIfVRUuIb3H3bFfbYIo8JZ9KrlDlhjps+yRe68SoygDGsw80xojW\nXP6f/HlDfaXsiXzUuNIZn6PDmFo+HSQzat98k7nEt2YGZzroNwsRlzHzHDMtGlAI\ndCwcn7MwQvMa3gbfZQu5R3CZ3QKBgQDvAQWQPHNVe52w3SUfYT8y/rXxSrRyqRpM\niiA/PiigCcpiH9GJwY47h9UiYq55C4KBIB4WtVEQWJNpuRqqF9mE/T28bSVM5xp8\nD+znFkv7JCT9nXM1BaeUSusVcVqrL/OBYJcHIqSu/8dIwLa0fEI1s3eavBj3BgV4\n9v2E1k/ZhwKBgQCJdU663on37BN/4pP5RItwvjmus3RUCnOiahFGOcTiH9Ub8mJS\nLFVVUQo2wUh3EgnKZM6P6hl09zFQtohWCbTpiB3f86ODC3aTEJufZvQKqGYIwhEy\nDFLPN2Nm6XxFp/3tPpcZRgHNeb3BQCvsDcN6XGm0WDe6lNASnlBnR99QoQKBgQDC\nGplTF9UvQpLB9ghVINx75OMM0PgV+wIx0Sf5VNkXiHwGDwNVFo4WCO3u3CgIhHF7\nvwLQvHbWiKlH/p4KMA5ndGf0JMxbVYFr6l8jGjehAizMkFflYu9Df0jHBGV3jBz+\nINznXZpTycUmb+SyVgxLorJrR4Ia9JfzMtyYSplU9wKBgQC0LyRftnkHlfbXx8c9\n3rmFYue029aAHeOql7BbWzguKXpJAWJYsTmV3OvS2kAwZAmYausRUEkkbuchoFP8\nXss85z56cge3mGphUfCFzwHDsoFlFe77gzf6wYm6f4ztAs/H47o2hv/5HIkU4Nn4\nXCkCLgtD40XZ7MN2XFyF2WdgXQ==\n-----END PRIVATE KEY-----\n",
+    client_email: "whatsapp-bot-sheets@whatsapp-chatbot-471004.iam.gserviceaccount.com",
+    client_id: "114818674736682471635",
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/whatsapp-bot-sheets%40whatsapp-chatbot-471004.iam.gserviceaccount.com",
+    universe_domain: "googleapis.com"
+};
 
 // --- GLOBAL STATE VARIABLES ---
 let initialFoods = [];
 let foods = [];
 let searchCategory = "All";
 let userName = "";
-let userPhone = ""; // New variable for phone number
+let userPhone = "";
+let accessToken = null; // For service account authentication
 
 // =================================================================
 // SECTION 2: DOM ELEMENT REFERENCES
@@ -34,7 +50,189 @@ const detailsModal = document.getElementById("detailsModal");
 const tokenModal = document.getElementById("tokenModal");
 
 // =================================================================
-// SECTION 3: CORE FUNCTIONS
+// SECTION 3: GOOGLE SHEETS AUTHENTICATION & API FUNCTIONS
+// =================================================================
+
+// JWT Helper Functions
+function base64UrlEscape(str) {
+    return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function base64UrlEncode(str) {
+    return base64UrlEscape(btoa(str));
+}
+
+async function createJWT() {
+    const header = {
+        alg: 'RS256',
+        typ: 'JWT'
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+        iss: SERVICE_ACCOUNT_CONFIG.client_email,
+        scope: 'https://www.googleapis.com/auth/spreadsheets',
+        aud: SERVICE_ACCOUNT_CONFIG.token_uri,
+        exp: now + 3600,
+        iat: now
+    };
+
+    const encodedHeader = base64UrlEncode(JSON.stringify(header));
+    const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+    const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
+    // Import the private key
+    const pemHeader = "-----BEGIN PRIVATE KEY-----";
+    const pemFooter = "-----END PRIVATE KEY-----";
+    const pemContents = SERVICE_ACCOUNT_CONFIG.private_key
+        .replace(pemHeader, "")
+        .replace(pemFooter, "")
+        .replace(/\s/g, "");
+
+    const binaryDerString = atob(pemContents);
+    const binaryDer = new Uint8Array(binaryDerString.length);
+    for (let i = 0; i < binaryDerString.length; i++) {
+        binaryDer[i] = binaryDerString.charCodeAt(i);
+    }
+
+    const key = await crypto.subtle.importKey(
+        "pkcs8",
+        binaryDer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+
+    const signature = await crypto.subtle.sign(
+        "RSASSA-PKCS1-v1_5",
+        key,
+        new TextEncoder().encode(unsignedToken)
+    );
+
+    const base64Signature = base64UrlEscape(btoa(String.fromCharCode(...new Uint8Array(signature))));
+    return `${unsignedToken}.${base64Signature}`;
+}
+
+// Get access token using JWT
+async function getAccessToken() {
+    try {
+        const jwt = await createJWT();
+        
+        const response = await fetch(SERVICE_ACCOUNT_CONFIG.token_uri, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+        });
+
+        if (!response.ok) {
+            throw new Error(`Token request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.access_token;
+    } catch (error) {
+        console.error('Error getting access token:', error);
+        throw error;
+    }
+}
+
+// Function to read data from Google Sheets using API key
+async function readGoogleSheet(sheetName, range = '') {
+    const fullRange = range ? `${sheetName}!${range}` : sheetName;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${fullRange}?key=${GOOGLE_SHEETS_API_KEY}`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Google Sheets API Error: ${response.statusText}`);
+        
+        const data = await response.json();
+        return data.values || [];
+    } catch (error) {
+        console.error('Error reading Google Sheet:', error);
+        throw error;
+    }
+}
+
+// Function to append data to Google Sheets using service account
+async function appendToGoogleSheet(sheetName, values) {
+    try {
+        // Get fresh access token if needed
+        if (!accessToken) {
+            accessToken = await getAccessToken();
+        }
+
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${sheetName}:append?valueInputOption=USER_ENTERED`;
+        
+        const payload = {
+            values: [values]
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            // If token expired, try to get a new one
+            if (response.status === 401) {
+                accessToken = await getAccessToken();
+                return appendToGoogleSheet(sheetName, values); // Retry with new token
+            }
+            
+            const errorData = await response.json();
+            throw new Error(`Google Sheets API Error: ${JSON.stringify(errorData)}`);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error writing to Google Sheet:', error);
+        throw error;
+    }
+}
+
+// Function to convert sheet rows to menu items
+function parseMenuData(rows) {
+    if (rows.length === 0) return [];
+    
+    // Assuming first row contains headers: id, name, price, category, image
+    const headers = rows[0];
+    const menuItems = [];
+    
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length === 0) continue;
+        
+        const item = {};
+        headers.forEach((header, index) => {
+            if (header && row[index] !== undefined) {
+                // Convert price to number if it's the price column
+                if (header.toLowerCase() === 'price') {
+                    item[header] = parseFloat(row[index]) || 0;
+                } else if (header.toLowerCase() === 'id') {
+                    item[header] = parseInt(row[index]) || i;
+                } else {
+                    item[header] = row[index];
+                }
+            }
+        });
+        
+        // Ensure required fields exist
+        if (item.name && item.price !== undefined) {
+            menuItems.push(item);
+        }
+    }
+    
+    return menuItems;
+}
+
+// =================================================================
+// SECTION 4: CORE FUNCTIONS
 // =================================================================
 
 function showModalMessage(message) {
@@ -66,13 +264,13 @@ function renderFoods() {
     menuContainer.innerHTML = filteredFoods.map(food => `
         <div class="bg-white rounded-2xl shadow-md overflow-hidden">
             <div class="h-48 sm:h-64 overflow-hidden">
-                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https.placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
+                <img src="${food.image || 'https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found'}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
             </div>
             <div class="p-4 pt-2">
                 <div class="flex justify-between items-start">
                     <div>
                         <h5 class="font-bold text-lg sm:text-2xl">${food.name}</h5>
-                        <p class="text-xs text-gray-500">${food.category}</p>
+                        <p class="text-xs text-gray-500">${food.category || 'No Category'}</p>
                     </div>
                     <div class="text-rose-600 font-bold text-xl sm:text-2xl">₹${food.price}</div>
                 </div>
@@ -111,7 +309,7 @@ function clearCart() {
 }
 
 // =================================================================
-// SECTION 4: EVENT HANDLERS & API INTERACTIONS
+// SECTION 5: EVENT HANDLERS & API INTERACTIONS
 // =================================================================
 
 function handleFoodItemClick(e) {
@@ -194,44 +392,34 @@ function submitName() {
     openOrderSummary();
 }
 
-// <<-- NAYA FUNCTION: Order ko Airtable mein save karne ke liye -->>
-async function saveOrderToAirtable() {
+// Function to save order to Google Sheets
+async function saveOrderToGoogleSheets() {
     const selectedFoods = foods.filter(f => f.qty > 0);
     const itemsString = selectedFoods.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
+    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     
-    const payload = {
-        records: [{ 
-            fields: { 
-                "Name": userName, 
-                "Phone": userPhone,
-                "Items": itemsString,
-                "Total": computeTotal(),
-                "Status": "Pending Acceptance" // Default status set karna
-            } 
-        }]
-    };
+    // Prepare the row data to append - matching your sheet structure
+    const orderData = [
+        userName,        // Column A: Name
+        userPhone,       // Column B: Phone
+        itemsString,     // Column C: Items
+        computeTotal(),  // Column D: Total
+        "",              // Column E: Token (empty for now)
+        "Pending Acceptance", // Column F: Status
+        timestamp        // Column G: Timestamp
+    ];
 
     try {
-        const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_ORDERS_TABLE_NAME}`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Airtable API Error: ${JSON.stringify(errorData)}`);
-        }
-        return true; // Success
-    } catch (e) {
-        console.error("Error saving order to Airtable:", e);
+        const success = await appendToGoogleSheet(ORDERS_SHEET_NAME, orderData);
+        return success;
+    } catch (error) {
+        console.error("Error saving order to Google Sheets:", error);
         showModalMessage("Order saving failed. Please try again.");
-        return false; // Failure
+        return false;
     }
 }
 
-
-// <<-- PURANA FUNCTION UPDATE KIYA GAYA HAI -->>
+// Updated confirm order function
 async function confirmOrder() {
     if (!userName || !userPhone) {
         showModalMessage("Please enter your name and phone number first.");
@@ -243,7 +431,7 @@ async function confirmOrder() {
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Saving...';
 
-    const isOrderSaved = await saveOrderToAirtable();
+    const isOrderSaved = await saveOrderToGoogleSheets();
 
     // Re-enable confirm button
     confirmBtn.disabled = false;
@@ -253,31 +441,32 @@ async function confirmOrder() {
         closeModal();
         tokenModal.classList.remove("hidden"); // Show the thank you modal
     }
-    // If saving fails, the error message is already shown by saveOrderToAirtable
+    // If saving fails, the error message is already shown by saveOrderToGoogleSheets
 }
 
-
 // =================================================================
-// SECTION 5: INITIALIZATION & EVENT LISTENERS
+// SECTION 6: INITIALIZATION & EVENT LISTENERS
 // =================================================================
 
 async function fetchMenu() {
     try {
         menuContainer.innerHTML = `<p class="text-center col-span-full">Loading menu...</p>`;
-        const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_MENU_TABLE_NAME}`, {
-            headers: { 'Authorization': `Bearer ${AIRTABLE_TOKEN}` }
-        });
-
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
         
-        const data = await response.json();
-        initialFoods = data.records.map(record => record.fields);
+        // Read menu data from Google Sheets
+        const rows = await readGoogleSheet(MENU_SHEET_NAME);
+        
+        if (rows.length === 0) {
+            throw new Error("No menu data found");
+        }
+        
+        // Parse the data
+        initialFoods = parseMenuData(rows);
         foods = initialFoods.map(f => ({ ...f, qty: 0 }));
 
-    } catch (e) {
-        console.error("Error fetching menu:", e);
-        showModalMessage("Could not load the menu. Please check API details.");
-        menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Airtable details.</p>`;
+    } catch (error) {
+        console.error("Error fetching menu:", error);
+        showModalMessage("Could not load the menu. Please check Google Sheets configuration.");
+        menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Google Sheets details.</p>`;
     }
 }
 

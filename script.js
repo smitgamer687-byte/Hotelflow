@@ -138,14 +138,32 @@ async function getAccessToken() {
     }
 }
 
-// Function to read data from Google Sheets using API key
+// Function to read data from Google Sheets using service account
 async function readGoogleSheet(sheetName, range = '') {
-    const fullRange = range ? `${sheetName}!${range}` : sheetName;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${fullRange}?key=${GOOGLE_SHEETS_API_KEY}`;
-    
     try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Google Sheets API Error: ${response.statusText}`);
+        // Get access token if we don't have one
+        if (!accessToken) {
+            accessToken = await getAccessToken();
+        }
+
+        const fullRange = range ? `${sheetName}!${range}` : sheetName;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${fullRange}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            // If token expired, try to get a new one
+            if (response.status === 401) {
+                accessToken = await getAccessToken();
+                return readGoogleSheet(sheetName, range); // Retry with new token
+            }
+            throw new Error(`Google Sheets API Error: ${response.statusText}`);
+        }
         
         const data = await response.json();
         return data.values || [];

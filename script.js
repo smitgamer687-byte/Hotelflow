@@ -252,7 +252,11 @@ function openOrderSummary() {
 }
 
 function openNameModal() {
-    if (computeTotal() === 0) {
+    const selectedFoods = foods.filter(f => f.qty > 0);
+    console.log("Selected foods for order:", selectedFoods); // Debug log
+    console.log("Current total:", computeTotal()); // Debug log
+    
+    if (selectedFoods.length === 0 || computeTotal() === 0) {
         showModalMessage("Your cart is empty. Please add items to order.");
         return;
     }

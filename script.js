@@ -52,11 +52,19 @@ function closeModal() {
 }
 
 function computeTotal() {
-    return foods.reduce((sum, food) => sum + (food.price * food.qty), 0);
+    const total = foods.reduce((sum, food) => {
+        const itemTotal = (food.price * food.qty);
+        console.log(`${food.name}: ${food.qty} x ${food.price} = ${itemTotal}`); // Debug log
+        return sum + itemTotal;
+    }, 0);
+    console.log("Total computed:", total); // Debug log
+    return total;
 }
 
 function updateTotalDisplay() {
-    totalDisplay.textContent = `₹${computeTotal()}`;
+    const total = computeTotal();
+    totalDisplay.textContent = `₹${total}`;
+    console.log("Total display updated to:", total); // Debug log
 }
 
 function renderFoods() {
@@ -67,7 +75,7 @@ function renderFoods() {
     menuContainer.innerHTML = filteredFoods.map(food => `
         <div class="bg-white rounded-2xl shadow-md overflow-hidden">
             <div class="h-48 sm:h-64 overflow-hidden">
-                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https.placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
+                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
             </div>
             <div class="p-4 pt-2">
                 <div class="flex justify-between items-start">
@@ -207,17 +215,30 @@ function handleFoodItemClick(e) {
     const id = parseInt(target.dataset.id);
     const food = foods.find(f => f.id === id);
 
-    if (!food) return;
+    if (!food) {
+        console.log("Food item not found for ID:", id); // Debug log
+        return;
+    }
+
+    console.log("Before click - Food:", food.name, "Qty:", food.qty, "Price:", food.price); // Debug log
 
     if (target.classList.contains("qty-btn")) {
         const delta = parseInt(target.dataset.delta);
         food.qty = Math.max(0, food.qty + delta);
+        console.log("Quantity changed by:", delta, "New qty:", food.qty); // Debug log
     } else if (target.classList.contains("add-btn")) {
         food.qty++;
+        console.log("Add button clicked, new qty:", food.qty); // Debug log
     }
 
+    // Update the quantity display
     const qtyElement = document.querySelector(`[data-id="${id}-qty"]`);
-    if (qtyElement) qtyElement.textContent = food.qty;
+    if (qtyElement) {
+        qtyElement.textContent = food.qty;
+        console.log("Updated quantity display for", food.name, "to:", food.qty); // Debug log
+    } else {
+        console.log("Could not find quantity element for ID:", id); // Debug log
+    }
     
     updateTotalDisplay();
 }
@@ -232,6 +253,8 @@ function handleCategoryClick(e) {
 
 function openOrderSummary() {
     const selectedFoods = foods.filter(f => f.qty > 0);
+    console.log("Opening order summary, selected foods:", selectedFoods); // Debug log
+    
     if (selectedFoods.length === 0) {
         showModalMessage("Please add items to your order first.");
         return;
@@ -253,13 +276,20 @@ function openOrderSummary() {
 
 function openNameModal() {
     const selectedFoods = foods.filter(f => f.qty > 0);
-    console.log("Selected foods for order:", selectedFoods); // Debug log
-    console.log("Current total:", computeTotal()); // Debug log
+    const total = computeTotal();
     
-    if (selectedFoods.length === 0 || computeTotal() === 0) {
+    console.log("Opening name modal - Selected foods:", selectedFoods); // Debug log
+    console.log("Opening name modal - Current total:", total); // Debug log
+    console.log("All foods with quantities:", foods.filter(f => f.qty > 0)); // Debug log
+    
+    // Fixed condition: Check if we have selected foods OR if total is greater than 0
+    if (selectedFoods.length === 0 || total <= 0) {
+        console.log("Cart validation failed - Empty cart or zero total"); // Debug log
         showModalMessage("Your cart is empty. Please add items to order.");
         return;
     }
+    
+    console.log("Opening name modal - validation passed"); // Debug log
     nameModal.classList.remove("hidden");
     nameInput.focus();
 }
@@ -295,14 +325,18 @@ async function confirmOrder() {
     
     // Disable confirm button to prevent multiple clicks
     const confirmBtn = document.getElementById('confirmOrderBtn');
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Saving...';
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Saving...';
+    }
 
     const result = await saveOrderToGoogleSheets();
 
     // Re-enable confirm button
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = 'Confirm Order';
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm Order';
+    }
     
     if (result.success) {
         // Update the token modal with the generated token
@@ -329,6 +363,8 @@ async function fetchMenu() {
         
         initialFoods = menuItems;
         foods = initialFoods.map(f => ({ ...f, qty: 0 }));
+        
+        console.log("Menu loaded successfully:", foods); // Debug log
 
     } catch (e) {
         console.error("Error fetching menu:", e);
@@ -338,34 +374,53 @@ async function fetchMenu() {
 }
 
 function setupEventListeners() {
-    document.getElementById("viewMenuBtn").addEventListener("click", () => document.getElementById("menuContainer").scrollIntoView({ behavior: 'smooth' }));
-    document.getElementById("knowMoreBtn").addEventListener("click", () => detailsModal.classList.remove("hidden"));
-    document.getElementById("orderBtn").addEventListener("click", openNameModal);
-    document.getElementById("clearBtn").addEventListener("click", clearCart);
-    menuContainer.addEventListener("click", handleFoodItemClick);
-    categoryContainer.addEventListener("click", handleCategoryClick);
-    document.getElementById("closeSummaryBtn").addEventListener("click", closeModal);
-    document.getElementById("confirmOrderBtn").addEventListener("click", confirmOrder);
-    document.getElementById("closeMessageModalBtn").addEventListener("click", closeModal);
-    document.getElementById("modalMessageOkayBtn").addEventListener("click", closeModal);
-    document.getElementById("closeDetailsModalBtn").addEventListener("click", closeModal);
-    document.getElementById("submitNameBtn").addEventListener("click", submitName);
-    document.getElementById("finalOkayBtn").addEventListener("click", () => {
+    // Check if elements exist before adding listeners
+    const viewMenuBtn = document.getElementById("viewMenuBtn");
+    const knowMoreBtn = document.getElementById("knowMoreBtn");
+    const orderBtn = document.getElementById("orderBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const closeSummaryBtn = document.getElementById("closeSummaryBtn");
+    const confirmOrderBtn = document.getElementById("confirmOrderBtn");
+    const closeMessageModalBtn = document.getElementById("closeMessageModalBtn");
+    const modalMessageOkayBtn = document.getElementById("modalMessageOkayBtn");
+    const closeDetailsModalBtn = document.getElementById("closeDetailsModalBtn");
+    const submitNameBtn = document.getElementById("submitNameBtn");
+    const finalOkayBtn = document.getElementById("finalOkayBtn");
+
+    if (viewMenuBtn) viewMenuBtn.addEventListener("click", () => document.getElementById("menuContainer").scrollIntoView({ behavior: 'smooth' }));
+    if (knowMoreBtn) knowMoreBtn.addEventListener("click", () => detailsModal.classList.remove("hidden"));
+    if (orderBtn) orderBtn.addEventListener("click", openNameModal);
+    if (clearBtn) clearBtn.addEventListener("click", clearCart);
+    if (closeSummaryBtn) closeSummaryBtn.addEventListener("click", closeModal);
+    if (confirmOrderBtn) confirmOrderBtn.addEventListener("click", confirmOrder);
+    if (closeMessageModalBtn) closeMessageModalBtn.addEventListener("click", closeModal);
+    if (modalMessageOkayBtn) modalMessageOkayBtn.addEventListener("click", closeModal);
+    if (closeDetailsModalBtn) closeDetailsModalBtn.addEventListener("click", closeModal);
+    if (submitNameBtn) submitNameBtn.addEventListener("click", submitName);
+    if (finalOkayBtn) finalOkayBtn.addEventListener("click", () => {
         clearCart();
         closeModal();
     });
+
+    // Main event listeners
+    menuContainer.addEventListener("click", handleFoodItemClick);
+    categoryContainer.addEventListener("click", handleCategoryClick);
 
     const enterKeyHandler = (event) => {
         if (event.key === "Enter") {
             submitName();
         }
     };
-    nameInput.addEventListener("keydown", enterKeyHandler);
-    phoneInput.addEventListener("keydown", enterKeyHandler);
+    
+    if (nameInput) nameInput.addEventListener("keydown", enterKeyHandler);
+    if (phoneInput) phoneInput.addEventListener("keydown", enterKeyHandler);
 }
 
 window.onload = async () => {
-    document.getElementById("currentYear").textContent = new Date().getFullYear();
+    const currentYearElement = document.getElementById("currentYear");
+    if (currentYearElement) {
+        currentYearElement.textContent = new Date().getFullYear();
+    }
     
     await fetchMenu();
     

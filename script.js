@@ -56,7 +56,7 @@ function computeTotal() {
 }
 
 function updateTotalDisplay() {
-    totalDisplay.textContent = `₹${computeTotal()}`;
+    totalDisplay.textContent = `${computeTotal()}`;
 }
 
 function renderFoods() {

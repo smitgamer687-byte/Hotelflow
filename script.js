@@ -86,14 +86,14 @@ function computeTotal() {
     });
     
     console.log(`💰 TOTAL: ₹${total}`);
-    return total;
+    return ₹total;
 }
 
 function updateTotalDisplay() {
     const total = computeTotal();
     if (totalDisplay) {
-        totalDisplay.textContent = total;
-        console.log("💰 Total display updated to:", total);
+        totalDisplay.textContent = ₹total;
+        console.log("💰 Total display updated to:", ₹total);
     }
 }
 

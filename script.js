@@ -63,7 +63,7 @@ function computeTotal() {
 
 function updateTotalDisplay() {
     const total = computeTotal();
-    totalDisplay.textContent = `₹${total}`;
+    totalDisplay.textContent = `${total}`;
     console.log("Total display updated to:", total); // Debug log
 }
 

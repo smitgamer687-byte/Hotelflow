@@ -56,7 +56,7 @@ function computeTotal() {
 }
 
 function updateTotalDisplay() {
-    totalDisplay.textContent = `${computeTotal()}`;
+    totalDisplay.textContent = `₹${computeTotal()}`;
 }
 
 function renderFoods() {
@@ -67,7 +67,7 @@ function renderFoods() {
     menuContainer.innerHTML = filteredFoods.map(food => `
         <div class="bg-white rounded-2xl shadow-md overflow-hidden">
             <div class="h-48 sm:h-64 overflow-hidden">
-                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
+                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https.placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
             </div>
             <div class="p-4 pt-2">
                 <div class="flex justify-between items-start">

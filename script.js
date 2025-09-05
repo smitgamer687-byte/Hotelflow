@@ -6,8 +6,8 @@
 const GOOGLE_SHEETS_API_KEY = 'AIzaSyDmbBjVa9JVkaPjhAQdplrOzyAGVfi7qMU';
 const MENU_SHEET_ID = '1SU0-74evidhgKLCAgzxI7-ZapeLiNi-5EFq6wtzGEbU';
 const ORDERS_SHEET_ID = '1W6AyucVZjLBhCxsVMLg-5AG_Lt8cCV1B5ZA1e5lWabc';
-const MENU_RANGE = 'Sheet1!A2:E'; // Assuming data starts from row 2
-const ORDERS_RANGE = 'Sheet1!A:G'; // Full range for orders
+const MENU_RANGE = 'Sheet1!A2:E';
+const ORDERS_RANGE = 'Sheet1!A:G';
 
 // --- GLOBAL STATE VARIABLES ---
 let initialFoods = [];
@@ -15,6 +15,23 @@ let foods = [];
 let searchCategory = "All";
 let userName = "";
 let userPhone = "";
+
+// =================================================================
+// DEBUG HELPER FUNCTION
+// =================================================================
+function debugCartState() {
+    console.log("=== CART DEBUG INFO ===");
+    console.log("Total foods:", foods.length);
+    const itemsWithQty = foods.filter(f => f.qty > 0);
+    console.log("Items with quantity > 0:", itemsWithQty.length);
+    itemsWithQty.forEach(item => {
+        console.log(`- ${item.name}: qty=${item.qty}, price=${item.price}, total=${item.qty * item.price}`);
+    });
+    const total = computeTotal();
+    console.log("Computed total:", total);
+    console.log("========================");
+    return { itemsWithQty, total };
+}
 
 // =================================================================
 // SECTION 2: DOM ELEMENT REFERENCES
@@ -39,6 +56,7 @@ const tokenModal = document.getElementById("tokenModal");
 // =================================================================
 
 function showModalMessage(message) {
+    console.log("Showing modal message:", message);
     modalMessageText.textContent = message;
     messageModal.classList.remove("hidden");
 }
@@ -52,25 +70,40 @@ function closeModal() {
 }
 
 function computeTotal() {
+    if (!foods || foods.length === 0) {
+        console.log("computeTotal: No foods array");
+        return 0;
+    }
+    
     const total = foods.reduce((sum, food) => {
-        const itemTotal = (food.price * food.qty);
-        console.log(`${food.name}: ${food.qty} x ${food.price} = ${itemTotal}`); // Debug log
+        if (!food) return sum;
+        const qty = parseInt(food.qty) || 0;
+        const price = parseFloat(food.price) || 0;
+        const itemTotal = qty * price;
+        if (qty > 0) {
+            console.log(`computeTotal: ${food.name} - qty:${qty} × price:${price} = ${itemTotal}`);
+        }
         return sum + itemTotal;
     }, 0);
-    console.log("Total computed:", total); // Debug log
+    
+    console.log("computeTotal: Final total =", total);
     return total;
 }
 
 function updateTotalDisplay() {
     const total = computeTotal();
-    totalDisplay.textContent = `${total}`;
-    console.log("Total display updated to:", total); // Debug log
+    if (totalDisplay) {
+        totalDisplay.textContent = `₹${total}`;
+        console.log("Updated total display to:", total);
+    }
 }
 
 function renderFoods() {
     const filteredFoods = searchCategory === "All" 
         ? foods 
         : foods.filter(f => f.category === searchCategory);
+    
+    console.log("Rendering foods. Count:", filteredFoods.length);
     
     menuContainer.innerHTML = filteredFoods.map(food => `
         <div class="bg-white rounded-2xl shadow-md overflow-hidden">
@@ -88,7 +121,7 @@ function renderFoods() {
                 <div class="mt-4 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <button class="qty-btn px-4 py-2 rounded-full bg-gray-100 text-base sm:text-lg font-bold transition-all duration-300 hover:bg-gray-200" data-id="${food.id}" data-delta="-1">-</button>
-                        <div class="w-6 text-center font-mono text-base sm:text-lg font-semibold" data-id="${food.id}-qty">${food.qty}</div>
+                        <div class="w-6 text-center font-mono text-base sm:text-lg font-semibold qty-display" data-id="${food.id}">${food.qty}</div>
                         <button class="qty-btn px-4 py-2 rounded-full bg-gray-100 text-base sm:text-lg font-bold transition-all duration-300 hover:bg-gray-200" data-id="${food.id}" data-delta="1">+</button>
                     </div>
                     <button class="add-btn px-6 py-2 rounded-full bg-rose-600 text-white text-base sm:text-lg font-semibold transition-all duration-300 hover:bg-rose-700" data-id="${food.id}">Add</button>
@@ -110,11 +143,12 @@ function renderCategories() {
 }
 
 function clearCart() {
+    console.log("Clearing cart");
     foods = initialFoods.map(f => ({ ...f, qty: 0 }));
     userName = "";
     userPhone = "";
-    nameInput.value = "";
-    phoneInput.value = "";
+    if (nameInput) nameInput.value = "";
+    if (phoneInput) phoneInput.value = "";
     renderFoods();
     updateTotalDisplay();
 }
@@ -123,7 +157,6 @@ function clearCart() {
 // SECTION 4: GOOGLE SHEETS API FUNCTIONS
 // =================================================================
 
-// Function to fetch menu data from Google Sheets
 async function fetchMenuFromGoogleSheets() {
     try {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${MENU_SHEET_ID}/values/${MENU_RANGE}?key=${GOOGLE_SHEETS_API_KEY}`;
@@ -136,7 +169,6 @@ async function fetchMenuFromGoogleSheets() {
         const data = await response.json();
         const rows = data.values || [];
         
-        // Transform Google Sheets data to match your food object structure
         const menuItems = rows.map((row, index) => ({
             id: index + 1,
             name: row[0] || '',
@@ -144,8 +176,9 @@ async function fetchMenuFromGoogleSheets() {
             price: parseFloat(row[3]) || 0,
             image: row[4] || 'https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found',
             qty: 0
-        })).filter(item => item.name); // Filter out empty rows
+        })).filter(item => item.name);
         
+        console.log("Menu items loaded:", menuItems);
         return menuItems;
     } catch (error) {
         console.error("Error fetching menu from Google Sheets:", error);
@@ -153,7 +186,6 @@ async function fetchMenuFromGoogleSheets() {
     }
 }
 
-// Function to save order to Google Sheets
 async function saveOrderToGoogleSheets() {
     try {
         const selectedFoods = foods.filter(f => f.qty > 0);
@@ -168,10 +200,8 @@ async function saveOrderToGoogleSheets() {
             second: '2-digit'
         });
         
-        // Generate a simple token (you can make this more sophisticated)
         const token = 'TKN' + Date.now().toString().slice(-6);
         
-        // Prepare the data to append
         const values = [[
             userName,
             userPhone,
@@ -211,36 +241,62 @@ async function saveOrderToGoogleSheets() {
 // =================================================================
 
 function handleFoodItemClick(e) {
+    console.log("Click detected on:", e.target);
+    console.log("Target classes:", e.target.classList.toString());
+    console.log("Target dataset:", e.target.dataset);
+    
     const target = e.target;
     const id = parseInt(target.dataset.id);
+    
+    console.log("Parsed ID:", id);
+    
+    if (isNaN(id)) {
+        console.log("Invalid ID, stopping");
+        return;
+    }
+    
     const food = foods.find(f => f.id === id);
+    console.log("Found food:", food);
 
     if (!food) {
-        console.log("Food item not found for ID:", id); // Debug log
+        console.log("Food item not found for ID:", id);
         return;
     }
 
-    console.log("Before click - Food:", food.name, "Qty:", food.qty, "Price:", food.price); // Debug log
+    console.log("BEFORE: Food name:", food.name, "Qty:", food.qty, "Price:", food.price);
+
+    let qtyChanged = false;
 
     if (target.classList.contains("qty-btn")) {
         const delta = parseInt(target.dataset.delta);
-        food.qty = Math.max(0, food.qty + delta);
-        console.log("Quantity changed by:", delta, "New qty:", food.qty); // Debug log
+        console.log("Quantity button clicked with delta:", delta);
+        const newQty = Math.max(0, food.qty + delta);
+        console.log("Old qty:", food.qty, "New qty:", newQty);
+        food.qty = newQty;
+        qtyChanged = true;
     } else if (target.classList.contains("add-btn")) {
+        console.log("Add button clicked");
         food.qty++;
-        console.log("Add button clicked, new qty:", food.qty); // Debug log
+        qtyChanged = true;
     }
 
-    // Update the quantity display
-    const qtyElement = document.querySelector(`[data-id="${id}-qty"]`);
-    if (qtyElement) {
-        qtyElement.textContent = food.qty;
-        console.log("Updated quantity display for", food.name, "to:", food.qty); // Debug log
-    } else {
-        console.log("Could not find quantity element for ID:", id); // Debug log
+    console.log("AFTER: Food qty:", food.qty);
+
+    if (qtyChanged) {
+        // Update all quantity displays for this food item
+        const qtyDisplays = document.querySelectorAll(`[data-id="${id}"]`);
+        console.log("Found quantity displays:", qtyDisplays.length);
+        
+        qtyDisplays.forEach(display => {
+            if (display.classList.contains('qty-display')) {
+                display.textContent = food.qty;
+                console.log("Updated display to:", food.qty);
+            }
+        });
+        
+        updateTotalDisplay();
+        debugCartState();
     }
-    
-    updateTotalDisplay();
 }
 
 function handleCategoryClick(e) {
@@ -252,8 +308,11 @@ function handleCategoryClick(e) {
 }
 
 function openOrderSummary() {
+    console.log("Opening order summary...");
+    debugCartState();
+    
     const selectedFoods = foods.filter(f => f.qty > 0);
-    console.log("Opening order summary, selected foods:", selectedFoods); // Debug log
+    console.log("Selected foods for summary:", selectedFoods);
     
     if (selectedFoods.length === 0) {
         showModalMessage("Please add items to your order first.");
@@ -275,23 +334,21 @@ function openOrderSummary() {
 }
 
 function openNameModal() {
-    const selectedFoods = foods.filter(f => f.qty > 0);
-    const total = computeTotal();
+    console.log("=== OPENING NAME MODAL ===");
     
-    console.log("Opening name modal - Selected foods:", selectedFoods); // Debug log
-    console.log("Opening name modal - Current total:", total); // Debug log
-    console.log("All foods with quantities:", foods.filter(f => f.qty > 0)); // Debug log
+    const { itemsWithQty, total } = debugCartState();
     
-    // Fixed condition: Check if we have selected foods OR if total is greater than 0
-    if (selectedFoods.length === 0 || total <= 0) {
-        console.log("Cart validation failed - Empty cart or zero total"); // Debug log
+    if (itemsWithQty.length === 0 || total <= 0) {
+        console.log("❌ Cart validation FAILED - Empty cart or zero total");
+        console.log("Items with qty:", itemsWithQty.length);
+        console.log("Total:", total);
         showModalMessage("Your cart is empty. Please add items to order.");
         return;
     }
     
-    console.log("Opening name modal - validation passed"); // Debug log
+    console.log("✅ Cart validation PASSED - Opening name modal");
     nameModal.classList.remove("hidden");
-    nameInput.focus();
+    if (nameInput) nameInput.focus();
 }
 
 function submitName() {
@@ -316,14 +373,12 @@ function submitName() {
     openOrderSummary();
 }
 
-// Updated confirm order function to work with Google Sheets
 async function confirmOrder() {
     if (!userName || !userPhone) {
         showModalMessage("Please enter your name and phone number first.");
         return;
     }
     
-    // Disable confirm button to prevent multiple clicks
     const confirmBtn = document.getElementById('confirmOrderBtn');
     if (confirmBtn) {
         confirmBtn.disabled = true;
@@ -332,14 +387,12 @@ async function confirmOrder() {
 
     const result = await saveOrderToGoogleSheets();
 
-    // Re-enable confirm button
     if (confirmBtn) {
         confirmBtn.disabled = false;
         confirmBtn.textContent = 'Confirm Order';
     }
     
     if (result.success) {
-        // Update the token modal with the generated token
         const tokenDisplay = document.getElementById('tokenDisplay');
         if (tokenDisplay) {
             tokenDisplay.textContent = result.token;
@@ -364,17 +417,20 @@ async function fetchMenu() {
         initialFoods = menuItems;
         foods = initialFoods.map(f => ({ ...f, qty: 0 }));
         
-        console.log("Menu loaded successfully:", foods); // Debug log
+        console.log("✅ Menu initialized successfully");
+        console.log("Initial foods count:", initialFoods.length);
+        console.log("Foods array:", foods);
 
     } catch (e) {
-        console.error("Error fetching menu:", e);
+        console.error("❌ Error fetching menu:", e);
         showModalMessage("Could not load the menu. Please check Google Sheets API configuration.");
         menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Google Sheets configuration.</p>`;
     }
 }
 
 function setupEventListeners() {
-    // Check if elements exist before adding listeners
+    console.log("Setting up event listeners...");
+    
     const viewMenuBtn = document.getElementById("viewMenuBtn");
     const knowMoreBtn = document.getElementById("knowMoreBtn");
     const orderBtn = document.getElementById("orderBtn");
@@ -387,10 +443,25 @@ function setupEventListeners() {
     const submitNameBtn = document.getElementById("submitNameBtn");
     const finalOkayBtn = document.getElementById("finalOkayBtn");
 
-    if (viewMenuBtn) viewMenuBtn.addEventListener("click", () => document.getElementById("menuContainer").scrollIntoView({ behavior: 'smooth' }));
-    if (knowMoreBtn) knowMoreBtn.addEventListener("click", () => detailsModal.classList.remove("hidden"));
-    if (orderBtn) orderBtn.addEventListener("click", openNameModal);
+    // Add event listeners with logging
+    if (viewMenuBtn) {
+        viewMenuBtn.addEventListener("click", () => {
+            console.log("View menu button clicked");
+            document.getElementById("menuContainer").scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+    
+    if (orderBtn) {
+        orderBtn.addEventListener("click", () => {
+            console.log("Order button clicked");
+            openNameModal();
+        });
+    } else {
+        console.log("❌ Order button not found!");
+    }
+    
     if (clearBtn) clearBtn.addEventListener("click", clearCart);
+    if (knowMoreBtn) knowMoreBtn.addEventListener("click", () => detailsModal.classList.remove("hidden"));
     if (closeSummaryBtn) closeSummaryBtn.addEventListener("click", closeModal);
     if (confirmOrderBtn) confirmOrderBtn.addEventListener("click", confirmOrder);
     if (closeMessageModalBtn) closeMessageModalBtn.addEventListener("click", closeModal);
@@ -414,9 +485,16 @@ function setupEventListeners() {
     
     if (nameInput) nameInput.addEventListener("keydown", enterKeyHandler);
     if (phoneInput) phoneInput.addEventListener("keydown", enterKeyHandler);
+    
+    console.log("✅ Event listeners setup complete");
 }
 
+// Add a global debug function
+window.debugCart = debugCartState;
+
 window.onload = async () => {
+    console.log("🚀 Application starting...");
+    
     const currentYearElement = document.getElementById("currentYear");
     if (currentYearElement) {
         currentYearElement.textContent = new Date().getFullYear();
@@ -427,4 +505,7 @@ window.onload = async () => {
     renderCategories();
     renderFoods();
     setupEventListeners();
+    
+    console.log("✅ Application loaded successfully");
+    console.log("You can debug the cart by typing 'debugCart()' in the console");
 };

@@ -1,130 +1,170 @@
 // =================================================================
-// SECTION 1: CONFIGURATION & GLOBAL VARIABLES
+// SIMPLIFIED FOOD ORDERING SYSTEM - DEBUG VERSION
 // =================================================================
 
-// --- GOOGLE SHEETS API DETAILS ---
+console.log("🔄 Loading JavaScript...");
+
+// --- CONFIGURATION ---
 const GOOGLE_SHEETS_API_KEY = 'AIzaSyDmbBjVa9JVkaPjhAQdplrOzyAGVfi7qMU';
 const MENU_SHEET_ID = '1SU0-74evidhgKLCAgzxI7-ZapeLiNi-5EFq6wtzGEbU';
 const ORDERS_SHEET_ID = '1W6AyucVZjLBhCxsVMLg-5AG_Lt8cCV1B5ZA1e5lWabc';
 const MENU_RANGE = 'Sheet1!A2:E';
-const ORDERS_RANGE = 'Sheet1!A:G';
 
-// --- GLOBAL STATE VARIABLES ---
-let initialFoods = [];
+// --- GLOBAL VARIABLES ---
 let foods = [];
+let initialFoods = [];
 let searchCategory = "All";
 let userName = "";
 let userPhone = "";
 
+// --- FALLBACK DATA (in case Google Sheets fails) ---
+const fallbackData = [
+    { id: 1, name: "Classic Burger", category: "Burger", price: 250, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400", qty: 0 },
+    { id: 2, name: "Onion Rings", category: "Sides", price: 180, image: "https://images.unsplash.com/photo-1639024471283-03518883512d?w=400", qty: 0 },
+    { id: 3, name: "Pepperoni Pizza", category: "Pizza", price: 450, image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400", qty: 0 },
+    { id: 4, name: "Masala Dosa", category: "Dosa", price: 120, image: "https://images.unsplash.com/photo-1630851840516-732042715b31?w=400", qty: 0 }
+];
+
+// --- DOM REFERENCES ---
+let menuContainer, totalDisplay, nameModal, messageModal, summaryModal;
+let nameInput, phoneInput, modalMessageText, summaryItemsContainer, summaryTotalDisplay;
+
 // =================================================================
-// DEBUG HELPER FUNCTION
+// UTILITY FUNCTIONS
 // =================================================================
-function debugCartState() {
-    console.log("=== CART DEBUG INFO ===");
-    console.log("Total foods:", foods.length);
-    const itemsWithQty = foods.filter(f => f.qty > 0);
-    console.log("Items with quantity > 0:", itemsWithQty.length);
-    itemsWithQty.forEach(item => {
-        console.log(`- ${item.name}: qty=${item.qty}, price=${item.price}, total=${item.qty * item.price}`);
+
+function initializeDOM() {
+    console.log("🔄 Initializing DOM references...");
+    menuContainer = document.getElementById("menuContainer");
+    totalDisplay = document.getElementById("totalDisplay");
+    nameModal = document.getElementById("nameModal");
+    messageModal = document.getElementById("messageModal");
+    summaryModal = document.getElementById("summaryModal");
+    nameInput = document.getElementById("nameInput");
+    phoneInput = document.getElementById("phoneInput");
+    modalMessageText = document.getElementById("modalMessageText");
+    summaryItemsContainer = document.getElementById("summaryItemsContainer");
+    summaryTotalDisplay = document.getElementById("summaryTotalDisplay");
+    
+    console.log("✅ DOM references initialized");
+}
+
+function showMessage(message) {
+    console.log("📢 Showing message:", message);
+    if (modalMessageText && messageModal) {
+        modalMessageText.textContent = message;
+        messageModal.classList.remove("hidden");
+    } else {
+        alert(message); // Fallback
+    }
+}
+
+function closeAllModals() {
+    console.log("❌ Closing all modals");
+    [summaryModal, messageModal, nameModal].forEach(modal => {
+        if (modal) modal.classList.add("hidden");
     });
-    const total = computeTotal();
-    console.log("Computed total:", total);
-    console.log("========================");
-    return { itemsWithQty, total };
 }
 
 // =================================================================
-// SECTION 2: DOM ELEMENT REFERENCES
+// CART FUNCTIONS
 // =================================================================
-
-const menuContainer = document.getElementById("menuContainer");
-const categoryContainer = document.getElementById("categoryContainer");
-const totalDisplay = document.getElementById("totalDisplay");
-const summaryModal = document.getElementById("summaryModal");
-const summaryItemsContainer = document.getElementById("summaryItemsContainer");
-const summaryTotalDisplay = document.getElementById("summaryTotalDisplay");
-const messageModal = document.getElementById("messageModal");
-const modalMessageText = document.getElementById("modalMessageText");
-const nameModal = document.getElementById("nameModal");
-const nameInput = document.getElementById("nameInput");
-const phoneInput = document.getElementById("phoneInput");
-const detailsModal = document.getElementById("detailsModal");
-const tokenModal = document.getElementById("tokenModal");
-
-// =================================================================
-// SECTION 3: CORE FUNCTIONS
-// =================================================================
-
-function showModalMessage(message) {
-    console.log("Showing modal message:", message);
-    modalMessageText.textContent = message;
-    messageModal.classList.remove("hidden");
-}
-
-function closeModal() {
-    summaryModal.classList.add("hidden");
-    messageModal.classList.add("hidden");
-    nameModal.classList.add("hidden");
-    detailsModal.classList.add("hidden");
-    tokenModal.classList.add("hidden");
-}
 
 function computeTotal() {
-    if (!foods || foods.length === 0) {
-        console.log("computeTotal: No foods array");
+    if (!Array.isArray(foods)) {
+        console.log("❌ foods is not an array:", foods);
         return 0;
     }
     
-    const total = foods.reduce((sum, food) => {
-        if (!food) return sum;
-        const qty = parseInt(food.qty) || 0;
-        const price = parseFloat(food.price) || 0;
-        const itemTotal = qty * price;
-        if (qty > 0) {
-            console.log(`computeTotal: ${food.name} - qty:${qty} × price:${price} = ${itemTotal}`);
+    let total = 0;
+    foods.forEach(food => {
+        if (food && food.qty > 0) {
+            const itemTotal = food.qty * food.price;
+            console.log(`💰 ${food.name}: ${food.qty} × ₹${food.price} = ₹${itemTotal}`);
+            total += itemTotal;
         }
-        return sum + itemTotal;
-    }, 0);
+    });
     
-    console.log("computeTotal: Final total =", total);
+    console.log(`💰 TOTAL: ₹${total}`);
     return total;
 }
 
 function updateTotalDisplay() {
     const total = computeTotal();
     if (totalDisplay) {
-        totalDisplay.textContent = `₹${total}`;
-        console.log("Updated total display to:", total);
+        totalDisplay.textContent = total;
+        console.log("💰 Total display updated to:", total);
     }
 }
 
+function getCartItems() {
+    const items = foods.filter(f => f && f.qty > 0);
+    console.log("🛒 Cart items:", items.length);
+    return items;
+}
+
+function debugCart() {
+    console.log("=== 🛒 CART DEBUG ===");
+    console.log("Foods array:", foods);
+    console.log("Foods length:", foods.length);
+    const cartItems = getCartItems();
+    console.log("Items in cart:", cartItems);
+    console.log("Total:", computeTotal());
+    console.log("====================");
+    return { foods, cartItems, total: computeTotal() };
+}
+
+// Make debugCart available globally
+window.debugCart = debugCart;
+
+// =================================================================
+// RENDERING FUNCTIONS
+// =================================================================
+
 function renderFoods() {
+    console.log("🎨 Rendering foods...");
+    
+    if (!menuContainer) {
+        console.log("❌ Menu container not found");
+        return;
+    }
+    
+    if (!Array.isArray(foods) || foods.length === 0) {
+        console.log("❌ No foods to render");
+        menuContainer.innerHTML = '<p class="text-center">No menu items available</p>';
+        return;
+    }
+    
     const filteredFoods = searchCategory === "All" 
         ? foods 
         : foods.filter(f => f.category === searchCategory);
     
-    console.log("Rendering foods. Count:", filteredFoods.length);
+    console.log(`🎨 Rendering ${filteredFoods.length} foods`);
     
     menuContainer.innerHTML = filteredFoods.map(food => `
         <div class="bg-white rounded-2xl shadow-md overflow-hidden">
             <div class="h-48 sm:h-64 overflow-hidden">
-                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found';">
+                <img src="${food.image}" alt="${food.name}" class="w-full h-full object-cover" 
+                     onerror="this.src='https://placehold.co/400x300/e5e7eb/4b5563?text=No+Image';">
             </div>
-            <div class="p-4 pt-2">
-                <div class="flex justify-between items-start">
+            <div class="p-4">
+                <div class="flex justify-between items-start mb-4">
                     <div>
-                        <h5 class="font-bold text-lg sm:text-2xl">${food.name}</h5>
+                        <h5 class="font-bold text-lg">${food.name}</h5>
                         <p class="text-xs text-gray-500">${food.category}</p>
                     </div>
-                    <div class="text-rose-600 font-bold text-xl sm:text-2xl">₹${food.price}</div>
+                    <div class="text-rose-600 font-bold text-xl">₹${food.price}</div>
                 </div>
-                <div class="mt-4 flex items-center justify-between">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <button class="qty-btn px-4 py-2 rounded-full bg-gray-100 text-base sm:text-lg font-bold transition-all duration-300 hover:bg-gray-200" data-id="${food.id}" data-delta="-1">-</button>
-                        <div class="w-6 text-center font-mono text-base sm:text-lg font-semibold qty-display" data-id="${food.id}">${food.qty}</div>
-                        <button class="qty-btn px-4 py-2 rounded-full bg-gray-100 text-base sm:text-lg font-bold transition-all duration-300 hover:bg-gray-200" data-id="${food.id}" data-delta="1">+</button>
+                        <button class="qty-btn w-10 h-10 rounded-full bg-gray-100 font-bold hover:bg-gray-200" 
+                                data-id="${food.id}" data-action="decrease">-</button>
+                        <span class="qty-display w-8 text-center font-bold text-lg" data-id="${food.id}">${food.qty}</span>
+                        <button class="qty-btn w-10 h-10 rounded-full bg-gray-100 font-bold hover:bg-gray-200" 
+                                data-id="${food.id}" data-action="increase">+</button>
                     </div>
-                    <button class="add-btn px-6 py-2 rounded-full bg-rose-600 text-white text-base sm:text-lg font-semibold transition-all duration-300 hover:bg-rose-700" data-id="${food.id}">Add</button>
+                    <button class="add-btn px-6 py-2 rounded-full bg-rose-600 text-white font-semibold hover:bg-rose-700" 
+                            data-id="${food.id}">Add</button>
                 </div>
             </div>
         </div>
@@ -133,379 +173,272 @@ function renderFoods() {
     updateTotalDisplay();
 }
 
-function renderCategories() {
-    const categories = ["All", ...new Set(initialFoods.map(f => f.category).filter(Boolean))];
-    categoryContainer.innerHTML = categories.map(cat => `
-        <button class="category-btn min-w-max px-6 py-3 rounded-lg shadow-sm text-base sm:text-lg font-semibold transition-all duration-300 hover:scale-105 ${searchCategory === cat ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white hover:bg-gray-100'}" data-category="${cat}">
-            ${cat}
-        </button>
-    `).join('');
-}
-
-function clearCart() {
-    console.log("Clearing cart");
-    foods = initialFoods.map(f => ({ ...f, qty: 0 }));
-    userName = "";
-    userPhone = "";
-    if (nameInput) nameInput.value = "";
-    if (phoneInput) phoneInput.value = "";
-    renderFoods();
-    updateTotalDisplay();
-}
-
 // =================================================================
-// SECTION 4: GOOGLE SHEETS API FUNCTIONS
+// EVENT HANDLERS
 // =================================================================
 
-async function fetchMenuFromGoogleSheets() {
-    try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${MENU_SHEET_ID}/values/${MENU_RANGE}?key=${GOOGLE_SHEETS_API_KEY}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Google Sheets API Error: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const rows = data.values || [];
-        
-        const menuItems = rows.map((row, index) => ({
-            id: index + 1,
-            name: row[0] || '',
-            category: row[2] || '',
-            price: parseFloat(row[3]) || 0,
-            image: row[4] || 'https://placehold.co/400x300/e5e7eb/4b5563?text=Image+Not+Found',
-            qty: 0
-        })).filter(item => item.name);
-        
-        console.log("Menu items loaded:", menuItems);
-        return menuItems;
-    } catch (error) {
-        console.error("Error fetching menu from Google Sheets:", error);
-        throw error;
-    }
-}
-
-async function saveOrderToGoogleSheets() {
-    try {
-        const selectedFoods = foods.filter(f => f.qty > 0);
-        const itemsString = selectedFoods.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
-        const timestamp = new Date().toLocaleString('en-IN', { 
-            timeZone: 'Asia/Kolkata',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        
-        const token = 'TKN' + Date.now().toString().slice(-6);
-        
-        const values = [[
-            userName,
-            userPhone,
-            itemsString,
-            computeTotal(),
-            token,
-            "Pending Acceptance",
-            timestamp
-        ]];
-        
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${ORDERS_SHEET_ID}/values/Sheet1!A:G:append?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                values: values
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Google Sheets API Error: ${JSON.stringify(errorData)}`);
-        }
-        
-        return { success: true, token: token };
-    } catch (error) {
-        console.error("Error saving order to Google Sheets:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-// =================================================================
-// SECTION 5: EVENT HANDLERS & API INTERACTIONS
-// =================================================================
-
-function handleFoodItemClick(e) {
-    console.log("Click detected on:", e.target);
-    console.log("Target classes:", e.target.classList.toString());
-    console.log("Target dataset:", e.target.dataset);
+function handleMenuClick(event) {
+    const target = event.target;
+    console.log("🖱️ Menu clicked:", target.className);
     
-    const target = e.target;
-    const id = parseInt(target.dataset.id);
-    
-    console.log("Parsed ID:", id);
-    
-    if (isNaN(id)) {
-        console.log("Invalid ID, stopping");
+    const foodId = parseInt(target.dataset.id);
+    if (!foodId) {
+        console.log("❌ No food ID found");
         return;
     }
     
-    const food = foods.find(f => f.id === id);
-    console.log("Found food:", food);
-
+    const food = foods.find(f => f.id === foodId);
     if (!food) {
-        console.log("Food item not found for ID:", id);
+        console.log("❌ Food not found for ID:", foodId);
         return;
     }
-
-    console.log("BEFORE: Food name:", food.name, "Qty:", food.qty, "Price:", food.price);
-
+    
+    console.log("🖱️ Food found:", food.name, "Current qty:", food.qty);
+    
     let qtyChanged = false;
-
+    
     if (target.classList.contains("qty-btn")) {
-        const delta = parseInt(target.dataset.delta);
-        console.log("Quantity button clicked with delta:", delta);
-        const newQty = Math.max(0, food.qty + delta);
-        console.log("Old qty:", food.qty, "New qty:", newQty);
-        food.qty = newQty;
-        qtyChanged = true;
+        const action = target.dataset.action;
+        console.log("🖱️ Quantity button:", action);
+        
+        if (action === "increase") {
+            food.qty++;
+            qtyChanged = true;
+        } else if (action === "decrease" && food.qty > 0) {
+            food.qty--;
+            qtyChanged = true;
+        }
     } else if (target.classList.contains("add-btn")) {
-        console.log("Add button clicked");
+        console.log("🖱️ Add button clicked");
         food.qty++;
         qtyChanged = true;
     }
-
-    console.log("AFTER: Food qty:", food.qty);
-
+    
     if (qtyChanged) {
-        // Update all quantity displays for this food item
-        const qtyDisplays = document.querySelectorAll(`[data-id="${id}"]`);
-        console.log("Found quantity displays:", qtyDisplays.length);
+        console.log("✅ Quantity changed to:", food.qty);
         
-        qtyDisplays.forEach(display => {
-            if (display.classList.contains('qty-display')) {
-                display.textContent = food.qty;
-                console.log("Updated display to:", food.qty);
-            }
-        });
+        // Update display
+        const qtyDisplay = document.querySelector(`[data-id="${foodId}"].qty-display`);
+        if (qtyDisplay) {
+            qtyDisplay.textContent = food.qty;
+        }
         
         updateTotalDisplay();
-        debugCartState();
+        debugCart();
     }
 }
 
-function handleCategoryClick(e) {
-    if (e.target.classList.contains("category-btn")) {
-        searchCategory = e.target.dataset.category;
-        renderCategories();
-        renderFoods();
-    }
-}
-
-function openOrderSummary() {
-    console.log("Opening order summary...");
-    debugCartState();
+function openOrderModal() {
+    console.log("🚪 Opening order modal...");
+    debugCart();
     
-    const selectedFoods = foods.filter(f => f.qty > 0);
-    console.log("Selected foods for summary:", selectedFoods);
+    const cartItems = getCartItems();
+    const total = computeTotal();
     
-    if (selectedFoods.length === 0) {
-        showModalMessage("Please add items to your order first.");
-        return;
-    }
-
-    summaryItemsContainer.innerHTML = selectedFoods.map(item => `
-        <div class="flex items-center justify-between py-2 border-b">
-            <div>
-                <div class="font-semibold">${item.name}</div>
-                <div class="text-sm text-gray-500">${item.qty} x ₹${item.price}</div>
-            </div>
-            <div class="font-semibold">₹${item.qty * item.price}</div>
-        </div>
-    `).join('');
-
-    summaryTotalDisplay.textContent = `₹${computeTotal()}`;
-    summaryModal.classList.remove("hidden");
-}
-
-function openNameModal() {
-    console.log("=== OPENING NAME MODAL ===");
-    
-    const { itemsWithQty, total } = debugCartState();
-    
-    if (itemsWithQty.length === 0 || total <= 0) {
-        console.log("❌ Cart validation FAILED - Empty cart or zero total");
-        console.log("Items with qty:", itemsWithQty.length);
-        console.log("Total:", total);
-        showModalMessage("Your cart is empty. Please add items to order.");
+    if (cartItems.length === 0 || total <= 0) {
+        console.log("❌ Cart is empty or total is 0");
+        showMessage("Your cart is empty. Please add items to order.");
         return;
     }
     
-    console.log("✅ Cart validation PASSED - Opening name modal");
-    nameModal.classList.remove("hidden");
-    if (nameInput) nameInput.focus();
+    console.log("✅ Opening name modal");
+    if (nameModal) {
+        nameModal.classList.remove("hidden");
+        if (nameInput) nameInput.focus();
+    }
 }
 
 function submitName() {
-    const currentUserName = nameInput.value.trim();
-    const currentUserPhone = phoneInput.value.trim();
-    const nameRegex = /^[a-zA-Z\s]{2,}$/;
-    const phoneRegex = /^[0-9]{10}$/;
-
-    if (!nameRegex.test(currentUserName)) {
-        showModalMessage("Please enter a valid name.");
+    console.log("📝 Submitting name...");
+    
+    const name = nameInput?.value?.trim() || "";
+    const phone = phoneInput?.value?.trim() || "";
+    
+    if (name.length < 2) {
+        showMessage("Please enter a valid name (at least 2 characters).");
         return;
     }
     
-    if (!phoneRegex.test(currentUserPhone)) {
-        showModalMessage("Please enter a valid 10-digit phone number.");
+    if (!/^\d{10}$/.test(phone)) {
+        showMessage("Please enter a valid 10-digit phone number.");
         return;
     }
-
-    userName = currentUserName;
-    userPhone = currentUserPhone;
-    closeModal();
+    
+    userName = name;
+    userPhone = phone;
+    
+    console.log("✅ Name and phone validated");
+    closeAllModals();
     openOrderSummary();
 }
 
-async function confirmOrder() {
-    if (!userName || !userPhone) {
-        showModalMessage("Please enter your name and phone number first.");
-        return;
+function openOrderSummary() {
+    console.log("📋 Opening order summary...");
+    
+    const cartItems = getCartItems();
+    const total = computeTotal();
+    
+    if (summaryItemsContainer) {
+        summaryItemsContainer.innerHTML = cartItems.map(item => `
+            <div class="flex justify-between py-2 border-b">
+                <div>
+                    <div class="font-semibold">${item.name}</div>
+                    <div class="text-sm text-gray-500">${item.qty} × ₹${item.price}</div>
+                </div>
+                <div class="font-semibold">₹${item.qty * item.price}</div>
+            </div>
+        `).join('');
     }
     
-    const confirmBtn = document.getElementById('confirmOrderBtn');
-    if (confirmBtn) {
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = 'Saving...';
-    }
-
-    const result = await saveOrderToGoogleSheets();
-
-    if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirm Order';
+    if (summaryTotalDisplay) {
+        summaryTotalDisplay.textContent = `₹${total}`;
     }
     
-    if (result.success) {
-        const tokenDisplay = document.getElementById('tokenDisplay');
-        if (tokenDisplay) {
-            tokenDisplay.textContent = result.token;
-        }
-        closeModal();
-        tokenModal.classList.remove("hidden");
-    } else {
-        showModalMessage("Order saving failed. Please try again. Error: " + result.error);
+    if (summaryModal) {
+        summaryModal.classList.remove("hidden");
     }
 }
 
 // =================================================================
-// SECTION 6: INITIALIZATION & EVENT LISTENERS
+// DATA LOADING
 // =================================================================
 
-async function fetchMenu() {
+async function loadMenuData() {
+    console.log("📥 Loading menu data...");
+    
     try {
-        menuContainer.innerHTML = `<p class="text-center col-span-full">Loading menu...</p>`;
+        // Try to load from Google Sheets
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${MENU_SHEET_ID}/values/${MENU_RANGE}?key=${GOOGLE_SHEETS_API_KEY}`;
+        console.log("📡 Fetching from:", url);
         
-        const menuItems = await fetchMenuFromGoogleSheets();
+        const response = await fetch(url);
+        console.log("📡 Response status:", response.status);
         
-        initialFoods = menuItems;
-        foods = initialFoods.map(f => ({ ...f, qty: 0 }));
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
         
-        console.log("✅ Menu initialized successfully");
-        console.log("Initial foods count:", initialFoods.length);
-        console.log("Foods array:", foods);
-
-    } catch (e) {
-        console.error("❌ Error fetching menu:", e);
-        showModalMessage("Could not load the menu. Please check Google Sheets API configuration.");
-        menuContainer.innerHTML = `<p class="text-center text-red-600 col-span-full">Failed to load menu. Please check Google Sheets configuration.</p>`;
+        const data = await response.json();
+        console.log("📡 API Response:", data);
+        
+        const rows = data.values || [];
+        console.log("📊 Rows received:", rows.length);
+        
+        if (rows.length === 0) {
+            throw new Error("No data received from Google Sheets");
+        }
+        
+        const menuItems = rows.map((row, index) => {
+            const item = {
+                id: index + 1,
+                name: row[0] || `Item ${index + 1}`,
+                category: row[2] || 'Other',
+                price: parseFloat(row[3]) || 0,
+                image: row[4] || 'https://placehold.co/400x300/e5e7eb/4b5563?text=No+Image',
+                qty: 0
+            };
+            console.log(`📦 Item ${index + 1}:`, item);
+            return item;
+        }).filter(item => item.name && item.name.trim() !== '');
+        
+        console.log("✅ Menu loaded from Google Sheets:", menuItems.length, "items");
+        return menuItems;
+        
+    } catch (error) {
+        console.log("❌ Google Sheets failed:", error.message);
+        console.log("🔄 Using fallback data");
+        return fallbackData;
     }
 }
+
+// =================================================================
+// INITIALIZATION
+// =================================================================
 
 function setupEventListeners() {
-    console.log("Setting up event listeners...");
+    console.log("🎧 Setting up event listeners...");
     
-    const viewMenuBtn = document.getElementById("viewMenuBtn");
-    const knowMoreBtn = document.getElementById("knowMoreBtn");
-    const orderBtn = document.getElementById("orderBtn");
-    const clearBtn = document.getElementById("clearBtn");
-    const closeSummaryBtn = document.getElementById("closeSummaryBtn");
-    const confirmOrderBtn = document.getElementById("confirmOrderBtn");
-    const closeMessageModalBtn = document.getElementById("closeMessageModalBtn");
-    const modalMessageOkayBtn = document.getElementById("modalMessageOkayBtn");
-    const closeDetailsModalBtn = document.getElementById("closeDetailsModalBtn");
-    const submitNameBtn = document.getElementById("submitNameBtn");
-    const finalOkayBtn = document.getElementById("finalOkayBtn");
-
-    // Add event listeners with logging
-    if (viewMenuBtn) {
-        viewMenuBtn.addEventListener("click", () => {
-            console.log("View menu button clicked");
-            document.getElementById("menuContainer").scrollIntoView({ behavior: 'smooth' });
-        });
+    // Menu clicks
+    if (menuContainer) {
+        menuContainer.addEventListener('click', handleMenuClick);
+        console.log("✅ Menu click listener added");
     }
     
+    // Order button
+    const orderBtn = document.getElementById('orderBtn');
     if (orderBtn) {
-        orderBtn.addEventListener("click", () => {
-            console.log("Order button clicked");
-            openNameModal();
-        });
+        orderBtn.addEventListener('click', openOrderModal);
+        console.log("✅ Order button listener added");
     } else {
-        console.log("❌ Order button not found!");
+        console.log("❌ Order button not found");
     }
     
-    if (clearBtn) clearBtn.addEventListener("click", clearCart);
-    if (knowMoreBtn) knowMoreBtn.addEventListener("click", () => detailsModal.classList.remove("hidden"));
-    if (closeSummaryBtn) closeSummaryBtn.addEventListener("click", closeModal);
-    if (confirmOrderBtn) confirmOrderBtn.addEventListener("click", confirmOrder);
-    if (closeMessageModalBtn) closeMessageModalBtn.addEventListener("click", closeModal);
-    if (modalMessageOkayBtn) modalMessageOkayBtn.addEventListener("click", closeModal);
-    if (closeDetailsModalBtn) closeDetailsModalBtn.addEventListener("click", closeModal);
-    if (submitNameBtn) submitNameBtn.addEventListener("click", submitName);
-    if (finalOkayBtn) finalOkayBtn.addEventListener("click", () => {
-        clearCart();
-        closeModal();
-    });
-
-    // Main event listeners
-    menuContainer.addEventListener("click", handleFoodItemClick);
-    categoryContainer.addEventListener("click", handleCategoryClick);
-
-    const enterKeyHandler = (event) => {
-        if (event.key === "Enter") {
-            submitName();
-        }
-    };
+    // Submit name button
+    const submitNameBtn = document.getElementById('submitNameBtn');
+    if (submitNameBtn) {
+        submitNameBtn.addEventListener('click', submitName);
+        console.log("✅ Submit name button listener added");
+    }
     
-    if (nameInput) nameInput.addEventListener("keydown", enterKeyHandler);
-    if (phoneInput) phoneInput.addEventListener("keydown", enterKeyHandler);
+    // Close modal buttons
+    const closeButtons = document.querySelectorAll('[id$="ModalBtn"], [id$="OkayBtn"]');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', closeAllModals);
+    });
+    console.log(`✅ ${closeButtons.length} close button listeners added`);
+    
+    // Enter key for name input
+    if (nameInput) {
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitName();
+        });
+    }
+    if (phoneInput) {
+        phoneInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitName();
+        });
+    }
     
     console.log("✅ Event listeners setup complete");
 }
 
-// Add a global debug function
-window.debugCart = debugCartState;
-
-window.onload = async () => {
-    console.log("🚀 Application starting...");
+async function initialize() {
+    console.log("🚀 Initializing application...");
     
-    const currentYearElement = document.getElementById("currentYear");
-    if (currentYearElement) {
-        currentYearElement.textContent = new Date().getFullYear();
+    try {
+        // 1. Initialize DOM
+        initializeDOM();
+        
+        // 2. Load menu data
+        const menuData = await loadMenuData();
+        initialFoods = menuData;
+        foods = [...menuData]; // Create a copy
+        
+        console.log("✅ Foods initialized:", foods.length, "items");
+        
+        // 3. Render initial UI
+        renderFoods();
+        
+        // 4. Setup event listeners
+        setupEventListeners();
+        
+        console.log("✅ Application initialized successfully!");
+        console.log("💡 You can debug the cart by typing 'debugCart()' in the console");
+        
+    } catch (error) {
+        console.error("❌ Initialization failed:", error);
+        showMessage("Application failed to load. Please refresh the page.");
     }
-    
-    await fetchMenu();
-    
-    renderCategories();
-    renderFoods();
-    setupEventListeners();
-    
-    console.log("✅ Application loaded successfully");
-    console.log("You can debug the cart by typing 'debugCart()' in the console");
-};
+}
+
+// =================================================================
+// START APPLICATION
+// =================================================================
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+
+console.log("✅ JavaScript loaded successfully!");

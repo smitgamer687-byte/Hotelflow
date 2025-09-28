@@ -2,11 +2,15 @@
 // SECTION 1: CONFIGURATION & GLOBAL VARIABLES
 // =================================================================
 
-// --- GOOGLE SHEETS API DETAILS ---
-const GOOGLE_SHEETS_API_KEY = 'AIzaSyBfMT1C-QnHZW5chpxSdIbPLGf1PUOcgcQ'; // Replace with your API key
-const GOOGLE_SHEETS_SPREADSHEET_ID = '1Q5DLZod6z9Hcyc-EI2FbXlnxXW5Gs7TWD_rmcpaEvlM'; // Replace with your spreadsheet ID
+// --- GOOGLE SHEETS API DETAILS (READ-ONLY) ---
+const GOOGLE_SHEETS_API_KEY = 'AIzaSyBfMT1C-QnHZW5chpxSdIbPLGf1PUOcgcQ'; // Used only for reading the menu
+const GOOGLE_SHEETS_SPREADSHEET_ID = '1Q5DLZod6z9Hcyc-EI2FbXlnxXW5Gs7TWD_rmcpaEvlM'; 
 const MENU_SHEET_NAME = 'Menu'; // Sheet name for menu items
-const ORDERS_SHEET_NAME = 'Orders'; // Sheet name for orders
+const ORDERS_SHEET_NAME = 'Orders'; // Sheet name for orders (Used by Apps Script)
+
+// --- APPS SCRIPT CONFIGURATION (WRITE FIX) ---
+// ⚠️ REPLACE THIS WITH THE URL COPIED AFTER DEPLOYING YOUR APPS SCRIPT WEB APP
+const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxKhK8OJYVhqIPjNdO-750L1KiWCqk97tC75s-gn2BurNFX-77_xUulCttr4hHEQqGJ/exec'; 
 
 // --- GLOBAL STATE VARIABLES ---
 let initialFoods = [];
@@ -24,7 +28,7 @@ const categoryContainer = document.getElementById("categoryContainer");
 const totalDisplay = document.getElementById("totalDisplay");
 const summaryModal = document.getElementById("summaryModal");
 const summaryItemsContainer = document.getElementById("summaryItemsContainer");
-const summaryTotalDisplay = document.getElementById("summaryTotalDisplay");
+const summaryTotalDisplay = document = document.getElementById("summaryTotalDisplay");
 const messageModal = document.getElementById("messageModal");
 const modalMessageText = document.getElementById("modalMessageText");
 const nameModal = document.getElementById("nameModal");
@@ -114,7 +118,7 @@ function clearCart() {
 // SECTION 4: GOOGLE SHEETS API FUNCTIONS
 // =================================================================
 
-// Function to read menu data from Google Sheets
+// Function to read menu data from Google Sheets (API Key works for GET requests)
 async function fetchMenuFromGoogleSheets() {
     try {
         const range = `${MENU_SHEET_NAME}!A:Z`; // Adjust range as needed
@@ -166,46 +170,49 @@ async function fetchMenuFromGoogleSheets() {
 }
 
 // Function to append order data to Google Sheets
+// MODIFIED: This function now sends a POST request to the Google Apps Script Web App URL.
 async function saveOrderToGoogleSheets() {
     try {
+        if (!APPS_SCRIPT_WEB_APP_URL || APPS_SCRIPT_WEB_APP_URL.includes('PASTE_YOUR_COPIED_WEB_APP_URL_HERE')) {
+             throw new Error("Apps Script URL is not configured. Cannot save order.");
+        }
+        
         const selectedFoods = foods.filter(f => f.qty > 0);
         const itemsString = selectedFoods.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
-        const timestamp = new Date().toLocaleString();
         
-        // Prepare the row data - adjust order based on your sheet structure
-        const rowData = [
-            timestamp,           // Column A: Timestamp
-            userName,           // Column B: Name
-            userPhone,          // Column C: Phone
-            itemsString,        // Column D: Items
-            computeTotal(),     // Column E: Total
-            "Pending Acceptance" // Column F: Status
-        ];
-        
-        const range = `${ORDERS_SHEET_NAME}!A:F`;
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_SPREADSHEET_ID}/values/${range}:append?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
-        
+        // Prepare the payload to send to the Apps Script
         const payload = {
-            values: [rowData]
+            userName: userName,
+            userPhone: userPhone,
+            itemsString: itemsString,
+            total: computeTotal(),
         };
-        
-        const response = await fetch(url, {
+
+        // Send the POST request to the Apps Script Web App URL
+        const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
         });
-        
+
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Google Sheets API Error: ${JSON.stringify(errorData)}`);
+            throw new Error(`Apps Script Network Error: ${response.status} ${response.statusText}`);
         }
+
+        const result = await response.json();
         
-        return true; // Success
+        if (result.result === 'success') {
+            return true; // Success
+        } else {
+            // If Apps Script returns an error message
+            throw new Error(result.message || "Apps Script failed to save data.");
+        }
+
     } catch (error) {
-        console.error("Error saving order to Google Sheets:", error);
-        showModalMessage("Order saving failed. Please try again.");
+        console.error("Error saving order via Apps Script:", error);
+        showModalMessage("Order saving failed. Please check Apps Script configuration.");
         return false; // Failure
     }
 }

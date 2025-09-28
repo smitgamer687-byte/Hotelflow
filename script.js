@@ -3,11 +3,10 @@
 // =================================================================
 
 // --- GOOGLE SHEETS API DETAILS ---
-const GOOGLE_SHEETS_API_KEY = 'AIzaSyDmbBjVa9JVkaPjhAQdplrOzyAGVfi7qMU';
-const MENU_SPREADSHEET_ID = '1SU0-74evidhgKLCAgzxI7-ZapeLiNi-5EFq6wtzGEbU';
-const ORDERS_SPREADSHEET_ID = '1W6AyucVZjLBhCxsVMLg-5AG_Lt8cCV1B5ZA1e5lWabc';
+const GOOGLE_SHEETS_API_KEY = 'AIzaSyDmbBjVa9JVkaPjhAQdplrOzyAGVfi7qMU'; // Replace with your API key
+const GOOGLE_SHEETS_SPREADSHEET_ID = '1Q5DLZod6z9Hcyc-EI2FbXlnxXW5Gs7TWD_rmcpaEvlM'; // Replace with your spreadsheet ID
 const MENU_SHEET_NAME = 'Menu'; // Sheet name for menu items
-const ORDERS_SHEET_NAME = 'Orders sheet'; // Sheet name for orders
+const ORDERS_SHEET_NAME = 'Orders'; // Sheet name for orders
 
 // --- GLOBAL STATE VARIABLES ---
 let initialFoods = [];
@@ -112,44 +111,50 @@ function clearCart() {
 }
 
 // =================================================================
-// SECTION 4: GOOGLE SHEETS API FUNCTIONS (Updated for CORS)
+// SECTION 4: GOOGLE SHEETS API FUNCTIONS
 // =================================================================
 
-// Function to read menu data from Google Sheets using published CSV
+// Function to read menu data from Google Sheets
 async function fetchMenuFromGoogleSheets() {
     try {
-        // Use the published CSV URL instead of API
-        const csvUrl = `https://docs.google.com/spreadsheets/d/${MENU_SPREADSHEET_ID}/export?format=csv&gid=0`;
+        const range = `${MENU_SHEET_NAME}!A:Z`; // Adjust range as needed
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_SPREADSHEET_ID}/values/${range}?key=${GOOGLE_SHEETS_API_KEY}`;
         
-        const response = await fetch(csvUrl);
+        const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Failed to fetch menu: ${response.status} ${response.statusText}`);
+            throw new Error(`Google Sheets API Error: ${response.status} ${response.statusText}`);
         }
         
-        const csvText = await response.text();
-        const rows = csvText.split('\n').map(row => row.split(','));
+        const data = await response.json();
+        const rows = data.values;
         
-        if (rows.length <= 1) {
+        if (!rows || rows.length <= 1) {
             throw new Error('No menu data found in Google Sheets');
         }
         
-        // Skip header row and process data
+        // Assuming first row contains headers: id, name, category, price, image
+        const headers = rows[0].map(header => header.toLowerCase().trim());
         const menuData = [];
+        
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            if (row.length >= 4 && row[0].trim()) { // Ensure we have data
-                const item = {
-                    name: row[0].replace(/"/g, '').trim(),           // Column A: name
-                    id: parseInt(row[1]) || i,                      // Column B: id
-                    category: row[2].replace(/"/g, '').trim(),       // Column C: category
-                    price: parseFloat(row[3]) || 0,                 // Column D: price
-                    image: row[4] ? row[4].replace(/"/g, '').trim() : '' // Column E: image
-                };
-                
-                // Only add item if it has required fields
-                if (item.name && item.price) {
-                    menuData.push(item);
+            const item = {};
+            
+            headers.forEach((header, index) => {
+                if (row[index] !== undefined) {
+                    if (header === 'id') {
+                        item[header] = parseInt(row[index]) || i;
+                    } else if (header === 'price') {
+                        item[header] = parseFloat(row[index]) || 0;
+                    } else {
+                        item[header] = row[index];
+                    }
                 }
+            });
+            
+            // Only add item if it has required fields
+            if (item.name && item.price) {
+                menuData.push(item);
             }
         }
         
@@ -160,34 +165,48 @@ async function fetchMenuFromGoogleSheets() {
     }
 }
 
-// Alternative approach using Google Apps Script Web App
-// You'll need to create a Google Apps Script for this
+// Function to append order data to Google Sheets
 async function saveOrderToGoogleSheets() {
     try {
         const selectedFoods = foods.filter(f => f.qty > 0);
         const itemsString = selectedFoods.map(item => `${item.name} (Qty: ${item.qty})`).join('; ');
         const timestamp = new Date().toLocaleString();
-        const orderToken = 'ORD-' + Date.now();
         
-        // For now, let's use a simple approach - you can set up Google Apps Script later
-        // This is a placeholder that will show success but won't actually save
-        console.log('Order data:', {
-            name: userName,
-            phone: userPhone,
-            items: itemsString,
-            total: computeTotal(),
-            token: orderToken,
-            timestamp: timestamp
+        // Prepare the row data - adjust order based on your sheet structure
+        const rowData = [
+            timestamp,           // Column A: Timestamp
+            userName,           // Column B: Name
+            userPhone,          // Column C: Phone
+            itemsString,        // Column D: Items
+            computeTotal(),     // Column E: Total
+            "Pending Acceptance" // Column F: Status
+        ];
+        
+        const range = `${ORDERS_SHEET_NAME}!A:F`;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_SPREADSHEET_ID}/values/${range}:append?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
+        
+        const payload = {
+            values: [rowData]
+        };
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
         });
         
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Google Sheets API Error: ${JSON.stringify(errorData)}`);
+        }
         
-        return true; // For now, always return success
+        return true; // Success
     } catch (error) {
-        console.error("Error saving order:", error);
+        console.error("Error saving order to Google Sheets:", error);
         showModalMessage("Order saving failed. Please try again.");
-        return false;
+        return false; // Failure
     }
 }
 
@@ -353,4 +372,4 @@ window.onload = async () => {
     renderCategories();
     renderFoods();
     setupEventListeners();
-};aaaaaaaaaaaaaaaaaaaa
+};

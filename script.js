@@ -273,11 +273,12 @@ async function confirmOrder() {
     };
 
     try {
-        // ▼▼▼ YAHAN APNA PYTHONANYWHERE USERNAME DAALEIN ▼▼▼
-        // Example: https://mybot123.pythonanywhere.com/webhook/google-sheets
+        // Variable ka naam yahan 'BOT_WEBHOOK_URL' rakha hai
         const BOT_WEBHOOK_URL = 'https://smitgamer687.pythonanywhere.com/webhook/google-sheets';
 
-        const response = await fetch(webhookURL, {
+        // <<< YAHAN BADLAV KIYA GAYA HAI >>>
+        // fetch me bhi 'BOT_WEBHOOK_URL' ka hi istemal karein
+        const response = await fetch(BOT_WEBHOOK_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

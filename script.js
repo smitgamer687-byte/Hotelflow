@@ -210,7 +210,7 @@ function submitName() {
     openOrderSummary();
 }
 
-// Firebase mein order save karne ka function
+// Firebase mein order save karne ka function (ise abhi istemal nahi kar rahe)
 async function saveOrderToFirebase() {
     const selectedFoods = foods.filter(f => f.qty > 0);
     const itemsArray = selectedFoods.map(item => ({
@@ -241,26 +241,74 @@ async function saveOrderToFirebase() {
     }
 }
 
+// =========================================================================
+// === YAHAN BADLAV KIYA GAYA HAI / CHANGE HAS BEEN MADE HERE ===
+// =========================================================================
 async function confirmOrder() {
     if (!userName || !userPhone) {
         showModalMessage("Please enter your name and phone number first.");
         return;
     }
-    
+
     const confirmBtn = document.getElementById('confirmOrderBtn');
     confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Saving...';
+    confirmBtn.textContent = 'Sending...';
 
-    const isOrderSaved = await saveOrderToFirebase();
+    // Data ko Python bot ke anusaar format karein
+    const selectedFoods = foods.filter(f => f.qty > 0);
+    const foodItemsStr = selectedFoods.map(item => item.name).join(', ');
+    const quantityStr = selectedFoods.map(item => item.qty).join(', ');
+    const totalAmount = computeTotal();
+
+    // Ye 'order' object Python code ke 'order_data' se match karna chahiye
+    const orderPayload = {
+        order: {
+            name: userName,
+            phone: userPhone,
+            foodItems: foodItemsStr,
+            quantity: quantityStr,
+            total: totalAmount
+        },
+        source: "WebsiteDirect"
+    };
+
+    try {
+        // ▼▼▼ YAHAN APNA PYTHONANYWHERE USERNAME DAALEIN ▼▼▼
+        // Example: https://mybot123.pythonanywhere.com/webhook/google-sheets
+        const BOT_WEBHOOK_URL = 'https://smitgamer687.pythonanywhere.com/webhook/google-sheets';
+
+        const response = await fetch(webhookURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderPayload)
+        });
+
+        if (!response.ok) {
+            // Agar server se error aaye to message dikhayein
+            throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Response from bot:', result);
+
+        // Order safal hone par Token Modal dikhayein
+        closeModal();
+        tokenModal.classList.remove("hidden");
+
+    } catch (error) {
+        console.error('Webhook Error:', error);
+        showModalMessage("Failed to send order to the bot. Please try again.");
+    }
 
     confirmBtn.disabled = false;
     confirmBtn.textContent = 'Confirm Order';
-    
-    if (isOrderSaved) {
-        closeModal();
-        tokenModal.classList.remove("hidden");
-    }
 }
+// =========================================================================
+// === BADLAV YAHAN KHATAM HOTA HAI / CHANGE ENDS HERE ===
+// =========================================================================
+
 
 // =================================================================
 // SECTION 6: INITIALIZATION & EVENT LISTENERS

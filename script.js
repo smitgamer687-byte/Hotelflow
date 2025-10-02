@@ -274,7 +274,7 @@ async function confirmOrder() {
 
     try {
         // Variable ka naam yahan 'BOT_WEBHOOK_URL' rakha hai
-        const BOT_WEBHOOK_URL = 'https://smitgamer687.pythonanywhere.com/webhook/google-sheets';
+        const BOT_WEBHOOK_URL = 'https://whatsapp-order-bot-vj1p.onrender.com/webhook/google-sheets';
 
         // <<< YAHAN BADLAV KIYA GAYA HAI >>>
         // fetch me bhi 'BOT_WEBHOOK_URL' ka hi istemal karein
